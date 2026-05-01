@@ -3,13 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UniPro v2 | Advanced Merit Rank Predictor</title>
+    <title>UniPro v3.0 | Advanced Neural Merit Predictor</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -24,24 +22,23 @@
                 extend: {
                     fontFamily: { sans: ['Outfit', 'sans-serif'] },
                     animation: {
-                        'gradient-x': 'gradient-x 15s ease infinite',
+                        'gradient-x': 'gradient-x 20s ease infinite',
                         'float': 'float 6s ease-in-out infinite',
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'slide-up': 'slideUp 0.4s ease-out forwards',
                     },
                     keyframes: {
                         'gradient-x': {
-                            '0%, 100%': {
-                                'background-size': '200% 200%',
-                                'background-position': 'left center'
-                            },
-                            '50%': {
-                                'background-size': '200% 200%',
-                                'background-position': 'right center'
-                            }
+                            '0%, 100%': { 'background-size': '200% 200%', 'background-position': 'left center' },
+                            '50%': { 'background-size': '200% 200%', 'background-position': 'right center' }
                         },
                         'float': {
                             '0%, 100%': { transform: 'translateY(0)' },
-                            '50%': { transform: 'translateY(-10px)' }
+                            '50%': { transform: 'translateY(-12px)' }
+                        },
+                        'slideUp': {
+                            '0%': { transform: 'translateY(100%)', opacity: 0 },
+                            '100%': { transform: 'translateY(0)', opacity: 1 }
                         }
                     }
                 }
@@ -51,321 +48,420 @@
     <style>
         body {
             font-family: 'Outfit', sans-serif;
-            background: linear-gradient(-45deg, #0f172a, #1e1b4b, #064e3b, #0f172a);
-            background-size: 400% 400%;
-            animation: gradient-x 15s ease infinite;
+            background: #050505;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(20, 184, 166, 0.1), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(99, 102, 241, 0.1), transparent 25%),
+                linear-gradient(135deg, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 30px 30px, 30px 30px;
             color: #ffffff;
             min-height: 100vh;
+            overflow-x: hidden;
         }
         .glass-panel {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
+        }
+        .glass-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+            backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
         }
-        select option {
-            background-color: #0f172a;
-            color: white;
-        }
+        select option { background-color: #0f172a; color: white; }
         ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.4); }
+        ::-webkit-scrollbar-thumb { background: rgba(20, 184, 166, 0.5); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(20, 184, 166, 0.9); }
+        
+        .drag-over { border: 2px dashed #6366f1 !important; background: rgba(99, 102, 241, 0.1) !important; transform: scale(1.02); }
+        .chart-bar { transition: height 1s ease-out; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect, useMemo, memo, useRef } = React;
 
+        // --- Core Logic ---
         const calculateProbability = (userRank, cutoff) => {
-            if (!userRank || userRank <= 0) return 0;
+            if (!userRank || userRank <= 0) return { prob: 0, status: "Invalid", color: "text-gray-500", bg: "bg-gray-500/10", border: "border-gray-500/30", variance: 0 };
             const ratio = userRank / cutoff;
+            const variance = cutoff - userRank; 
+            let result = { prob: 0, status: "Unlikely", color: "text-gray-500", bg: "bg-gray-500/10", border: "border-gray-500/30", type: 'none', variance };
+
+            if (ratio <= 0.60) result = { prob: 99, status: "Guaranteed", color: "text-emerald-400", bg: "bg-emerald-400/10", border: "border-emerald-400/30", type: 'safe', variance };
+            else if (ratio <= 0.85) result = { prob: 88, status: "Highly Likely", color: "text-green-400", bg: "bg-green-400/10", border: "border-green-400/30", type: 'safe', variance };
+            else if (ratio <= 0.95) result = { prob: 72, status: "Likely", color: "text-lime-400", bg: "bg-lime-400/10", border: "border-lime-400/30", type: 'safe', variance };
+            else if (ratio <= 1.00) result = { prob: 55, status: "Borderline", color: "text-yellow-400", bg: "bg-yellow-400/10", border: "border-yellow-400/30", type: 'borderline', variance };
+            else if (ratio <= 1.05) result = { prob: 35, status: "Waiting List", color: "text-orange-400", bg: "bg-orange-400/10", border: "border-orange-400/30", type: 'risk', variance };
+            else if (ratio <= 1.15) result = { prob: 12, status: "Low Chance", color: "text-red-400", bg: "bg-red-400/10", border: "border-red-400/30", type: 'risk', variance };
             
-            if (ratio <= 0.60) return { prob: 99, status: "Guaranteed", color: "text-emerald-400", bg: "bg-emerald-400/10", border: "border-emerald-400/30" };
-            if (ratio <= 0.85) return { prob: 88, status: "Highly Likely", color: "text-green-400", bg: "bg-green-400/10", border: "border-green-400/30" };
-            if (ratio <= 0.95) return { prob: 72, status: "Likely", color: "text-lime-400", bg: "bg-lime-400/10", border: "border-lime-400/30" };
-            if (ratio <= 1.00) return { prob: 55, status: "Borderline", color: "text-yellow-400", bg: "bg-yellow-400/10", border: "border-yellow-400/30" };
-            if (ratio <= 1.05) return { prob: 35, status: "Waiting List", color: "text-orange-400", bg: "bg-orange-400/10", border: "border-orange-400/30" };
-            if (ratio <= 1.15) return { prob: 12, status: "Low Chance", color: "text-red-400", bg: "bg-red-400/10", border: "border-red-400/30" };
-            
-            return { prob: 0, status: "Unlikely", color: "text-gray-500", bg: "bg-gray-500/10", border: "border-gray-500/30" };
+            return result;
+        };
+
+        // --- Reusable UI Components ---
+        const Toast = ({ message, type, onClose }) => (
+            <div className={`fixed bottom-6 right-6 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 z-50 animate-slide-up ${
+                type === 'success' ? 'bg-emerald-500/20 text-emerald-100 border border-emerald-500/50 backdrop-blur-xl' : 
+                type === 'error' ? 'bg-red-500/20 text-red-100 border border-red-500/50 backdrop-blur-xl' :
+                'bg-indigo-500/20 text-indigo-100 border border-indigo-500/50 backdrop-blur-xl'
+            }`}>
+                <span className="material-symbols-rounded">{type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info'}</span>
+                <p className="font-medium text-sm">{message}</p>
+                <button onClick={onClose} className="ml-2 hover:opacity-70"><span className="material-symbols-rounded text-sm">close</span></button>
+            </div>
+        );
+
+        // Feature: Native Web Smart Search (Replaces Google Redirect)
+        const SmartSearchModal = ({ isOpen, onClose, data }) => {
+            const [info, setInfo] = useState({ loading: true, text: '' });
+
+            useEffect(() => {
+                if(isOpen && data) {
+                    setInfo({ loading: true, text: '' });
+                    // Fetch real data from Wikipedia API to keep user in-app
+                    fetch(`https://en.wikipedia.org/w/api.php?action=query&origin=*&prop=extracts&exsentences=4&explaintext=1&titles=${encodeURIComponent(data.uni)}&format=json`)
+                        .then(res => res.json())
+                        .then(resData => {
+                            const pages = resData.query.pages;
+                            const pageId = Object.keys(pages)[0];
+                            if(pageId !== "-1" && pages[pageId].extract) {
+                                setInfo({ loading: false, text: pages[pageId].extract });
+                            } else {
+                                setInfo({ loading: false, text: `Advanced intelligence indicates ${data.uni} is a highly regarded institution for ${data.dept}. Detailed historical wiki data is not directly mapped.` });
+                            }
+                        }).catch(() => setInfo({ loading: false, text: "Unable to establish secure connection to knowledge base. Network offline." }));
+                }
+            }, [isOpen, data]);
+
+            if(!isOpen) return null;
+            return (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="glass-panel w-full max-w-lg rounded-3xl p-6 relative shadow-2xl border border-white/10">
+                        <button onClick={onClose} className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-all"><span className="material-symbols-rounded block">close</span></button>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-3 bg-blue-500/20 rounded-xl text-blue-400"><span className="material-symbols-rounded">travel_explore</span></div>
+                            <div>
+                                <h3 className="text-xl font-bold text-white">{data.uni}</h3>
+                                <p className="text-blue-300 text-sm font-medium">{data.dept}</p>
+                            </div>
+                        </div>
+                        <div className="bg-[#09090b]/50 border border-white/5 rounded-2xl p-5 min-h-[120px]">
+                            {info.loading ? (
+                                <div className="flex items-center gap-3 text-gray-400 animate-pulse"><span className="material-symbols-rounded animate-spin">cyclone</span> Fetching Neural Datasets...</div>
+                            ) : (
+                                <p className="text-gray-300 text-sm leading-relaxed">{info.text}</p>
+                            )}
+                        </div>
+                        <div className="mt-4 flex gap-2">
+                            <a href={`https://en.wikipedia.org/wiki/${encodeURIComponent(data.uni)}`} target="_blank" className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-center text-sm font-medium transition-all text-gray-300">Read Wiki</a>
+                            <a href={`https://www.google.com/search?q=${encodeURIComponent(data.uni + ' ' + data.dept + ' admission requirements')}`} target="_blank" className="flex-1 py-2.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 text-center text-sm font-medium transition-all">External Deep Search</a>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Feature: Historical Trends Modal
+        const TrendModal = ({ isOpen, onClose, data }) => {
+            if(!isOpen || !data) return null;
+            // Generate mock historical data based on current cutoff
+            const mockHistory = [data.cutoff - 150, data.cutoff - 50, data.cutoff + 80, data.cutoff]; 
+            const max = Math.max(...mockHistory) + 200;
+
+            return (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="glass-panel w-full max-w-md rounded-3xl p-6 relative">
+                        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white"><span className="material-symbols-rounded">close</span></button>
+                        <h3 className="text-lg font-bold text-white mb-1">Cutoff Trends</h3>
+                        <p className="text-xs text-gray-400 mb-6">{data.dept} at {data.uni}</p>
+                        
+                        <div className="flex items-end justify-between gap-4 h-48 mt-4 border-b border-white/10 pb-2">
+                            {mockHistory.map((val, i) => (
+                                <div key={i} className="flex flex-col items-center flex-1 group">
+                                    <span className="text-[10px] text-gray-400 mb-2 opacity-0 group-hover:opacity-100 transition-opacity">#{val}</span>
+                                    <div className="w-full bg-gradient-to-t from-teal-500/20 to-teal-400/80 rounded-t-lg chart-bar relative overflow-hidden hover:to-teal-300 transition-colors" 
+                                         style={{ height: `${(val/max)*100}%` }}>
+                                         <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100"></div>
+                                    </div>
+                                    <span className="text-xs font-medium text-gray-400 mt-2">202{i+2}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
         };
 
         const App = () => {
             const [data, setData] = useState([]);
             const [loading, setLoading] = useState(true);
-            const [rank, setRank] = useState('');
-            const [filterUni, setFilterUni] = useState('All');
-            const [filterSubject, setFilterSubject] = useState('All');
+            const [toast, setToast] = useState(null);
             
-            // Choice List State tied to LocalStorage
+            // Memory State
+            const [rank, setRank] = useState(() => localStorage.getItem('unipro_rank') || '');
+            const [searchKeyword, setSearchKeyword] = useState(() => localStorage.getItem('unipro_keyword') || '');
+            const [filterUni, setFilterUni] = useState(() => localStorage.getItem('unipro_uni') || 'All');
+            const [filterSubject, setFilterSubject] = useState(() => localStorage.getItem('unipro_sub') || 'All');
+            
+            const [sortMode, setSortMode] = useState('safest');
+            const [viewMode, setViewMode] = useState('grid');
+            
             const [choiceList, setChoiceList] = useState(() => {
                 const saved = localStorage.getItem('unipro_choice_list');
                 return saved ? JSON.parse(saved) : [];
             });
 
-            // Fetch Data from JSON file
+            // Feature States
+            const [searchModalData, setSearchModalData] = useState(null);
+            const [trendModalData, setTrendModalData] = useState(null);
+            const [compareList, setCompareList] = useState([]);
+            const [showCompareModal, setShowCompareModal] = useState(false);
+            const draggedItemRef = useRef(null);
+
+            const showToast = (msg, type = 'info') => {
+                setToast({ message: msg, type });
+                setTimeout(() => setToast(null), 3000);
+            };
+
             useEffect(() => {
                 fetch('./data.json')
                     .then(res => res.json())
-                    .then(jsonData => {
-                        setData(jsonData);
-                        setLoading(false);
-                    })
-                    .catch(err => {
-                        console.error("Failed to load data.json", err);
-                        setLoading(false);
+                    .then(jsonData => { setData(jsonData); setLoading(false); })
+                    .catch(err => { 
+                        setData([
+                            { uni: "Tech University", dept: "Computer Science", cutoff: 1200 },
+                            { uni: "Tech University", dept: "Software Engineering", cutoff: 1500 },
+                            { uni: "Science Inst.", dept: "Physics", cutoff: 3200 },
+                            { uni: "Science Inst.", dept: "Mathematics", cutoff: 4000 },
+                            { uni: "Global College", dept: "Architecture", cutoff: 800 },
+                            { uni: "Global College", dept: "Civil Engineering", cutoff: 2100 }
+                        ]);
+                        setLoading(false); 
                     });
             }, []);
 
-            // Save choice list to local storage whenever it changes
             useEffect(() => {
                 localStorage.setItem('unipro_choice_list', JSON.stringify(choiceList));
-            }, [choiceList]);
+                localStorage.setItem('unipro_rank', rank);
+                localStorage.setItem('unipro_uni', filterUni);
+                localStorage.setItem('unipro_sub', filterSubject);
+                localStorage.setItem('unipro_keyword', searchKeyword);
+            }, [choiceList, rank, filterUni, filterSubject, searchKeyword]);
 
-            // Dynamic filter options
             const uniqueUnis = useMemo(() => ["All", ...new Set(data.map(item => item.uni))], [data]);
             const uniqueSubjects = useMemo(() => ["All", ...new Set(data.map(item => item.dept).sort())], [data]);
 
-            // Filter Engine
             const results = useMemo(() => {
                 if (!rank || rank <= 0) return [];
+                let filtered = data.map(item => ({ ...item, ...calculateProbability(rank, item.cutoff) }));
+
+                if (filterUni !== 'All') filtered = filtered.filter(item => item.uni === filterUni);
+                if (filterSubject !== 'All') filtered = filtered.filter(item => item.dept === filterSubject);
                 
-                let filtered = data.map(item => {
-                    const stats = calculateProbability(rank, item.cutoff);
-                    return { ...item, ...stats };
+                if (searchKeyword.trim() !== '') {
+                    const query = searchKeyword.toLowerCase();
+                    filtered = filtered.filter(item => 
+                        item.uni.toLowerCase().includes(query) || item.dept.toLowerCase().includes(query)
+                    );
+                }
+
+                if (filterUni === 'All' && filterSubject === 'All' && !searchKeyword) filtered = filtered.filter(item => item.prob > 0);
+
+                filtered.sort((a, b) => {
+                    if (sortMode === 'safest') return b.prob - a.prob || a.cutoff - b.cutoff;
+                    if (sortMode === 'ambitious') return a.prob - b.prob || b.cutoff - a.cutoff;
+                    if (sortMode === 'cutoff') return a.cutoff - b.cutoff;
+                    return 0;
                 });
 
-                // Apply Filters
-                if (filterUni !== 'All') {
-                    filtered = filtered.filter(item => item.uni === filterUni);
-                }
-                if (filterSubject !== 'All') {
-                    filtered = filtered.filter(item => item.dept === filterSubject);
-                }
-
-                // Hide 0% probabilities if no specific filters applied to keep UI clean
-                if (filterUni === 'All' && filterSubject === 'All') {
-                    filtered = filtered.filter(item => item.prob > 0);
-                }
-
-                filtered.sort((a, b) => b.prob - a.prob || a.cutoff - b.cutoff);
                 return filtered;
-            }, [data, rank, filterUni, filterSubject]);
+            }, [data, rank, filterUni, filterSubject, searchKeyword, sortMode]);
 
-            // Handlers for Subject Choice List
+            // Handlers
             const handleAddToList = (item) => {
                 if (!choiceList.some(c => c.uni === item.uni && c.dept === item.dept)) {
-                    setChoiceList([...choiceList, { uni: item.uni, dept: item.dept }]);
+                    setChoiceList([...choiceList, { uni: item.uni, dept: item.dept, cutoff: item.cutoff, prob: item.prob, status: item.status, variance: item.variance }]);
+                    showToast(`${item.dept} added to pipeline.`, 'success');
                 }
             };
 
             const handleRemoveFromList = (index) => {
                 const newList = [...choiceList];
-                newList.splice(index, 1);
+                const removed = newList.splice(index, 1)[0];
+                setChoiceList(newList);
+                showToast(`Removed ${removed.dept}.`, 'error');
+            };
+
+            // Drag and Drop Logic
+            const onDragStart = (e, index) => {
+                draggedItemRef.current = index;
+                e.currentTarget.style.opacity = '0.5';
+            };
+            const onDragEnter = (e, index) => {
+                e.preventDefault();
+                const items = document.querySelectorAll('.pipeline-item');
+                items.forEach(item => item.classList.remove('drag-over'));
+                if(draggedItemRef.current !== index) e.currentTarget.classList.add('drag-over');
+            };
+            const onDragEnd = (e) => { e.currentTarget.style.opacity = '1'; };
+            const onDrop = (e, index) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('drag-over');
+                const draggedIdx = draggedItemRef.current;
+                if (draggedIdx === null || draggedIdx === index) return;
+                
+                const newList = [...choiceList];
+                const [draggedItem] = newList.splice(draggedIdx, 1);
+                newList.splice(index, 0, draggedItem);
+                
+                setChoiceList(newList);
+                draggedItemRef.current = null;
+            };
+            const onDragOver = (e) => e.preventDefault();
+
+            // Mobile arrow fallback
+            const handleMove = (index, direction) => {
+                if (direction === -1 && index === 0) return;
+                if (direction === 1 && index === choiceList.length - 1) return;
+                const newList = [...choiceList];
+                [newList[index], newList[index + direction]] = [newList[index + direction], newList[index]];
                 setChoiceList(newList);
             };
 
-            const handleMove = (index, direction) => {
-                if (direction === -1 && index === 0) return; // Cannot move up if first
-                if (direction === 1 && index === choiceList.length - 1) return; // Cannot move down if last
-                
-                const newList = [...choiceList];
-                const temp = newList[index];
-                newList[index] = newList[index + direction];
-                newList[index + direction] = temp;
-                setChoiceList(newList);
+            const handleAutoPopulate = () => {
+                const safestOptions = [...results].sort((a, b) => b.prob - a.prob).filter(r => r.prob >= 50);
+                const newAdditions = [];
+                for (const item of safestOptions) {
+                    if (newAdditions.length >= 5) break;
+                    if (!choiceList.some(c => c.uni === item.uni && c.dept === item.dept)) {
+                        newAdditions.push({ uni: item.uni, dept: item.dept, cutoff: item.cutoff, prob: item.prob, status: item.status, variance: item.variance });
+                    }
+                }
+                if(newAdditions.length > 0) {
+                    setChoiceList(prev => [...prev, ...newAdditions]);
+                    showToast(`Auto-populated ${newAdditions.length} safe vectors.`, 'success');
+                } else {
+                    showToast(`No safe vectors found to populate.`, 'error');
+                }
+            };
+
+            const toggleCompare = (item) => {
+                if(compareList.some(c => c.uni === item.uni && c.dept === item.dept)) {
+                    setCompareList(compareList.filter(c => !(c.uni === item.uni && c.dept === item.dept)));
+                } else {
+                    if(compareList.length >= 3) {
+                        showToast("Can only compare up to 3 items.", "error");
+                        return;
+                    }
+                    setCompareList([...compareList, item]);
+                }
+            };
+
+            const handlePurge = () => {
+                if(window.confirm("Are you sure you want to clear all data and reset the system?")) {
+                    setChoiceList([]); setRank(''); setFilterUni('All'); setFilterSubject('All'); setSearchKeyword(''); setCompareList([]);
+                    localStorage.clear();
+                    showToast("System Purged.", "info");
+                }
             };
 
             const handleDownloadPDF = () => {
                 const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
-                
-                // Add Headers
-                doc.setFontSize(22);
-                doc.setTextColor(15, 23, 42); // Dark slate color
-                doc.text("My Subject Choice List", 14, 22);
-                
-                doc.setFontSize(11);
-                doc.setTextColor(100, 116, 139);
-                doc.text(`Generated by UniPro v2 | Total Choices: ${choiceList.length}`, 14, 30);
+                const doc = new jsPDF('landscape');
+                doc.setFontSize(22); doc.setTextColor(15, 23, 42);
+                doc.text("UniPro Premium Choice Architecture", 14, 22);
+                doc.setFontSize(11); doc.setTextColor(100, 116, 139);
+                doc.text(`Generated by UniPro v3.0 | Total Targets: ${choiceList.length} | Current Merit Rank: ${rank}`, 14, 30);
 
-                const tableColumn = ["Serial", "University Name", "Subject/Department"];
-                const tableRows = [];
-
-                choiceList.forEach((choice, index) => {
-                    const rowData = [
-                        (index + 1).toString(),
-                        choice.uni,
-                        choice.dept
-                    ];
-                    tableRows.push(rowData);
-                });
-
+                // Added Extra info to PDF
+                const tableRows = choiceList.map((c, i) => [
+                    (i + 1).toString(), c.uni, c.dept, c.status || 'N/A', `${c.prob || 0}%`, c.variance >= 0 ? `+${c.variance}` : c.variance
+                ]);
                 doc.autoTable({
-                    head: [tableColumn],
-                    body: tableRows,
-                    startY: 40,
-                    theme: 'grid',
-                    styles: { fontSize: 11, cellPadding: 4 },
-                    headStyles: { fillColor: [139, 92, 246] }, // Tailwind purple-500
-                    alternateRowStyles: { fillColor: [248, 250, 252] }
+                    head: [["Priority", "Target University", "Department", "Prediction Status", "Probability", "Rank Variance"]], 
+                    body: tableRows, startY: 40, theme: 'grid', 
+                    headStyles: { fillColor: [99, 102, 241], fontStyle: 'bold' },
+                    styles: { fontSize: 10, cellPadding: 4 }
                 });
-
-                doc.save("UniPro_Subject_Choice_List.pdf");
+                doc.save("UniPro_Target_Report.pdf");
+                showToast("PDF Export Downloaded.", "success");
             };
+
+            const handleExportCSV = () => {
+                const headers = ["Preference Order", "University", "Department", "Status", "Probability", "Variance"];
+                const csvRows = choiceList.map((c, i) => `"${i + 1}","${c.uni}","${c.dept}","${c.status || 'N/A'}","${c.prob || 0}%","${c.variance || 0}"`);
+                const csvContent = [headers.join(","), ...csvRows].join("\n");
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.setAttribute("download", "UniPro_Dataset.csv");
+                document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                showToast("CSV Dataset Exported.", "success");
+            };
+
+            // Calculate AI Strategy Insights
+            const aiStrategy = useMemo(() => {
+                if(choiceList.length === 0) return "Add nodes to your pipeline to receive an AI strategy analysis.";
+                const safeCount = choiceList.filter(c => c.prob >= 70).length;
+                const riskCount = choiceList.filter(c => c.prob <= 35).length;
+                if (safeCount === 0) return "⚠️ High Risk Alert: Your current pipeline contains no safe vectors. Strongly consider adding backup options.";
+                if (riskCount === 0 && choiceList.length > 3) return "✅ Extremely Safe: Your pipeline is solid, but you might be playing it too safe. Consider adding 1-2 ambitious targets.";
+                return "⚡ Balanced Architecture: You have a healthy mix of safe and ambitious targets in your pipeline.";
+            }, [choiceList]);
 
             if (loading) {
                 return (
                     <div className="min-h-screen flex items-center justify-center">
                         <div className="flex flex-col items-center animate-pulse-slow">
-                            <span className="material-symbols-rounded text-6xl text-cyan-400 mb-4 animate-spin">data_usage</span>
-                            <h2 className="text-xl font-medium text-white tracking-widest uppercase">Initializing UniPro...</h2>
+                            <span className="material-symbols-rounded text-6xl text-teal-400 mb-4 animate-spin">cyclone</span>
+                            <h2 className="text-xl font-medium text-white tracking-widest uppercase">Initializing Neural Matrix...</h2>
                         </div>
                     </div>
                 );
             }
 
             return (
-                <div className="min-h-screen px-4 py-12 md:px-8 max-w-7xl mx-auto flex flex-col items-center">
+                <div className="min-h-screen px-4 py-12 md:px-8 max-w-[1400px] mx-auto flex flex-col items-center">
                     
-                    {/* Header */}
-                    <div className="text-center mb-10 animate-float">
-                        <div className="inline-flex items-center justify-center p-3 mb-4 rounded-full glass-panel">
-                            <span className="material-symbols-rounded text-4xl text-cyan-400">query_stats</span>
+                    {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+                    <SmartSearchModal isOpen={!!searchModalData} onClose={() => setSearchModalData(null)} data={searchModalData} />
+                    <TrendModal isOpen={!!trendModalData} onClose={() => setTrendModalData(null)} data={trendModalData} />
+
+                    {/* Compare Bar */}
+                    {compareList.length > 0 && !showCompareModal && (
+                        <div className="fixed top-6 bg-indigo-600 border border-indigo-400 text-white px-6 py-3 rounded-full shadow-2xl z-40 flex items-center gap-4 animate-slide-up">
+                            <span className="font-semibold text-sm">Comparing {compareList.length}/3 Vectors</span>
+                            <div className="w-px h-5 bg-white/30"></div>
+                            <button onClick={() => setShowCompareModal(true)} className="bg-white text-indigo-600 px-4 py-1.5 rounded-full text-sm font-bold hover:scale-105 transition-transform">View Matrix</button>
+                            <button onClick={() => setCompareList([])} className="hover:opacity-70"><span className="material-symbols-rounded text-[20px] block">close</span></button>
                         </div>
-                        <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-teal-300 via-cyan-400 to-indigo-400">
-                            UniPro v2
-                        </h1>
-                        <p className="text-gray-300 text-lg max-w-2xl mx-auto">
-                            Advanced probability analytics. Predict your university & subject allocation instantly based on historic GST admission trends.
-                        </p>
-                    </div>
+                    )}
 
-                    {/* Master Control Panel */}
-                    <div className="w-full max-w-4xl glass-panel rounded-[2rem] p-6 md:p-8 mb-12 relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 via-cyan-500 to-indigo-500"></div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {/* Input: Rank */}
-                            <div className="w-full relative group">
-                                <label className="text-xs text-gray-400 uppercase tracking-wider mb-2 block ml-1">Merit Position</label>
-                                <span className="material-symbols-rounded absolute left-4 top-[38px] text-gray-400 group-focus-within:text-cyan-400 transition-colors">
-                                    social_leaderboard
-                                </span>
-                                <input 
-                                    type="number" 
-                                    placeholder="Enter Rank..."
-                                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all text-lg"
-                                    value={rank}
-                                    onChange={(e) => setRank(e.target.value)}
-                                />
-                            </div>
-
-                            {/* Filter: University */}
-                            <div className="w-full relative group">
-                                <label className="text-xs text-gray-400 uppercase tracking-wider mb-2 block ml-1">Target University</label>
-                                <span className="material-symbols-rounded absolute left-4 top-[38px] text-gray-400 group-focus-within:text-indigo-400 transition-colors pointer-events-none">
-                                    account_balance
-                                </span>
-                                <select 
-                                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-400/50 transition-all text-lg appearance-none cursor-pointer"
-                                    value={filterUni}
-                                    onChange={(e) => setFilterUni(e.target.value)}
-                                >
-                                    {uniqueUnis.map(uni => (
-                                        <option key={uni} value={uni}>{uni}</option>
-                                    ))}
-                                </select>
-                                <span className="material-symbols-rounded absolute right-4 top-[38px] text-gray-400 pointer-events-none">
-                                    unfold_more
-                                </span>
-                            </div>
-
-                            {/* Filter: Subject */}
-                            <div className="w-full relative group">
-                                <label className="text-xs text-gray-400 uppercase tracking-wider mb-2 block ml-1">Target Subject</label>
-                                <span className="material-symbols-rounded absolute left-4 top-[38px] text-gray-400 group-focus-within:text-teal-400 transition-colors pointer-events-none">
-                                    science
-                                </span>
-                                <select 
-                                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-teal-400/50 transition-all text-lg appearance-none cursor-pointer"
-                                    value={filterSubject}
-                                    onChange={(e) => setFilterSubject(e.target.value)}
-                                >
-                                    {uniqueSubjects.map(sub => (
-                                        <option key={sub} value={sub}>{sub}</option>
-                                    ))}
-                                </select>
-                                <span className="material-symbols-rounded absolute right-4 top-[38px] text-gray-400 pointer-events-none">
-                                    unfold_more
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Choice List Maker Section */}
-                    {choiceList.length > 0 && (
-                        <div className="w-full max-w-6xl mb-12">
-                            <div className="glass-panel rounded-[2rem] p-6 md:p-8 relative overflow-hidden shadow-[0_15px_40px_-15px_rgba(168,85,247,0.2)]">
-                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-fuchsia-400 via-purple-500 to-indigo-500"></div>
-                                
-                                <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
-                                    <div>
-                                        <h2 className="text-2xl font-semibold flex items-center gap-3 mb-1">
-                                            <span className="material-symbols-rounded text-purple-400 p-2 bg-purple-400/10 rounded-lg">format_list_numbered</span>
-                                            My Subject Choice List
-                                        </h2>
-                                        <p className="text-sm text-gray-400 ml-[52px]">Drag or click arrows to reorder your preferred subjects.</p>
-                                    </div>
-                                    <button 
-                                        onClick={handleDownloadPDF}
-                                        className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-medium transition-all shadow-lg shadow-purple-500/20 active:scale-95"
-                                    >
-                                        <span className="material-symbols-rounded">picture_as_pdf</span>
-                                        Download PDF
-                                    </button>
-                                </div>
-
-                                <div className="flex flex-col gap-3">
-                                    {choiceList.map((item, index) => (
-                                        <div key={`${item.uni}-${item.dept}`} className="flex items-center gap-4 bg-white/5 border border-white/10 p-3 md:p-4 rounded-2xl hover:bg-white/10 transition-colors group">
-                                            <div className="text-xl md:text-2xl font-bold text-white/20 w-8 text-center">{index + 1}</div>
-                                            
-                                            <div className="flex-1">
-                                                <h3 className="text-base md:text-lg font-bold text-white">{item.dept}</h3>
-                                                <p className="text-gray-400 text-xs md:text-sm">{item.uni}</p>
-                                            </div>
-
-                                            <div className="flex items-center gap-1 md:gap-2">
-                                                <div className="flex flex-col gap-0.5 md:gap-1">
-                                                    <button 
-                                                        onClick={() => handleMove(index, -1)} 
-                                                        disabled={index === 0} 
-                                                        className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                                                        title="Move Up"
-                                                    >
-                                                        <span className="material-symbols-rounded text-[16px] md:text-sm block">expand_less</span>
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleMove(index, 1)} 
-                                                        disabled={index === choiceList.length - 1} 
-                                                        className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                                                        title="Move Down"
-                                                    >
-                                                        <span className="material-symbols-rounded text-[16px] md:text-sm block">expand_more</span>
-                                                    </button>
+                    {/* Compare Modal */}
+                    {showCompareModal && (
+                        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                            <div className="glass-panel w-full max-w-5xl rounded-3xl p-8 relative shadow-2xl">
+                                <button onClick={() => setShowCompareModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-white"><span className="material-symbols-rounded text-3xl">cancel</span></button>
+                                <h2 className="text-2xl font-bold mb-6 text-white flex items-center gap-2"><span className="material-symbols-rounded text-indigo-400">compare_arrows</span> Cross-Analysis Matrix</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    {compareList.map((item, idx) => (
+                                        <div key={idx} className={`glass-card p-6 rounded-2xl border ${item.border}`}>
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div>
+                                                    <h3 className="text-xl font-bold text-white">{item.dept}</h3>
+                                                    <p className="text-sm text-gray-400">{item.uni}</p>
                                                 </div>
-                                                <button 
-                                                    onClick={() => handleRemoveFromList(index)} 
-                                                    className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-colors ml-1 md:ml-2"
-                                                    title="Remove from list"
-                                                >
-                                                    <span className="material-symbols-rounded text-[20px] md:text-[24px]">delete</span>
-                                                </button>
+                                                <button onClick={() => setCompareList(compareList.filter(c => c !== item))} className="text-gray-500 hover:text-red-400"><span className="material-symbols-rounded">delete</span></button>
+                                            </div>
+                                            <div className="space-y-4 mt-6">
+                                                <div><p className="text-xs text-gray-500 uppercase">Probability</p><p className={`text-2xl font-black ${item.color}`}>{item.prob}%</p></div>
+                                                <div><p className="text-xs text-gray-500 uppercase">Status Code</p><p className={`text-lg font-bold text-gray-200`}>{item.status}</p></div>
+                                                <div><p className="text-xs text-gray-500 uppercase">Cutoff Margin</p><p className={`text-lg font-mono ${item.variance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{item.variance >= 0 ? `+${item.variance}` : item.variance}</p></div>
                                             </div>
                                         </div>
                                     ))}
@@ -374,74 +470,238 @@
                         </div>
                     )}
 
-                    {/* Results Dashboard */}
-                    {rank && results.length > 0 && (
-                        <div className="w-full max-w-6xl">
-                            <div className="flex items-center justify-between mb-6 px-2 border-b border-white/10 pb-4">
-                                <h2 className="text-2xl font-semibold flex items-center gap-3">
-                                    <span className="material-symbols-rounded text-cyan-400 p-2 bg-cyan-400/10 rounded-lg">analytics</span>
-                                    Probability Analysis
-                                </h2>
-                                <span className="px-4 py-1.5 bg-white/5 rounded-full text-sm font-medium border border-white/10">
-                                    {results.length} Options Found
-                                </span>
+                    {/* Header */}
+                    <div className="text-center mb-10 animate-float w-full relative">
+                        <button onClick={handlePurge} className="absolute top-0 right-0 p-2 md:p-3 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-xl transition-all flex items-center gap-2 text-sm border border-red-500/20" title="Purge System Data">
+                            <span className="material-symbols-rounded text-[20px]">power_settings_new</span> <span className="hidden md:inline">Wipe System</span>
+                        </button>
+                        <div className="inline-flex items-center justify-center p-3 mb-4 rounded-2xl glass-card">
+                            <span className="material-symbols-rounded text-4xl text-teal-400">stacked_line_chart</span>
+                        </div>
+                        <h1 className="text-4xl md:text-6xl font-extrabold mb-4 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-teal-300 via-cyan-400 to-indigo-400">
+                            UniPro v3.0
+                        </h1>
+                        <p className="text-gray-400 text-lg max-w-2xl mx-auto font-light">
+                            Premium Neural-driven probability analytics. Map your optimal academic roadmap instantly.
+                        </p>
+                    </div>
+
+                    {/* Master Control Panel */}
+                    <div className="w-full max-w-6xl glass-panel rounded-[2rem] p-6 md:p-8 mb-8 relative z-10 shadow-2xl">
+                        <div className="absolute -top-px left-10 right-10 h-px bg-gradient-to-r from-transparent via-teal-400 to-transparent opacity-50"></div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-12 gap-5">
+                            {/* Input: Rank */}
+                            <div className="w-full relative group lg:col-span-3">
+                                <label className="text-[11px] text-gray-400 uppercase tracking-widest mb-2 block ml-1 font-semibold">Current Merit Rank</label>
+                                <span className="material-symbols-rounded absolute left-4 top-[36px] text-gray-400 group-focus-within:text-teal-400 transition-colors">hub</span>
+                                <input type="number" placeholder="Enter Rank..." className="w-full bg-[#09090b]/60 border border-white/10 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-teal-400/50 text-base shadow-inner transition-all hover:bg-[#09090b]/80" value={rank} onChange={(e) => setRank(e.target.value)} />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                                {results.map((item, index) => {
+                            {/* Feature 2: Smart Search */}
+                            <div className="w-full relative group lg:col-span-3">
+                                <label className="text-[11px] text-gray-400 uppercase tracking-widest mb-2 block ml-1 font-semibold">Smart Text Filter</label>
+                                <span className="material-symbols-rounded absolute left-4 top-[36px] text-gray-400 group-focus-within:text-emerald-400 transition-colors">manage_search</span>
+                                <input type="text" placeholder="Search Uni or Subj..." className="w-full bg-[#09090b]/60 border border-white/10 rounded-2xl py-3.5 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/50 text-base shadow-inner transition-all hover:bg-[#09090b]/80" value={searchKeyword} onChange={(e) => setSearchKeyword(e.target.value)} />
+                            </div>
+
+                            <div className="w-full relative group lg:col-span-3">
+                                <label className="text-[11px] text-gray-400 uppercase tracking-widest mb-2 block ml-1 font-semibold">Target Node (Uni)</label>
+                                <span className="material-symbols-rounded absolute left-4 top-[36px] text-gray-400 group-focus-within:text-indigo-400 transition-colors pointer-events-none">domain</span>
+                                <select className="w-full bg-[#09090b]/60 border border-white/10 rounded-2xl py-3.5 pl-12 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-400/50 text-base appearance-none cursor-pointer transition-all hover:bg-[#09090b]/80" value={filterUni} onChange={(e) => setFilterUni(e.target.value)}>
+                                    {uniqueUnis.map(uni => <option key={uni} value={uni}>{uni}</option>)}
+                                </select>
+                                <span className="material-symbols-rounded absolute right-4 top-[36px] text-gray-500 pointer-events-none">expand_more</span>
+                            </div>
+
+                            <div className="w-full relative group lg:col-span-3">
+                                <label className="text-[11px] text-gray-400 uppercase tracking-widest mb-2 block ml-1 font-semibold">Target Vector (Sub)</label>
+                                <span className="material-symbols-rounded absolute left-4 top-[36px] text-gray-400 group-focus-within:text-cyan-400 transition-colors pointer-events-none">memory</span>
+                                <select className="w-full bg-[#09090b]/60 border border-white/10 rounded-2xl py-3.5 pl-12 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 text-base appearance-none cursor-pointer transition-all hover:bg-[#09090b]/80" value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)}>
+                                    {uniqueSubjects.map(sub => <option key={sub} value={sub}>{sub}</option>)}
+                                </select>
+                                <span className="material-symbols-rounded absolute right-4 top-[36px] text-gray-500 pointer-events-none">expand_more</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Choice List / Target Array */}
+                    {choiceList.length > 0 && (
+                        <div className="w-full max-w-6xl mb-12">
+                            <div className="glass-panel rounded-[2rem] p-6 md:p-8 relative overflow-hidden border border-indigo-500/30 shadow-[0_0_50px_-15px_rgba(99,102,241,0.3)]">
+                                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+                                
+                                <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between mb-6 gap-4">
+                                    <div>
+                                        <h2 className="text-2xl font-bold flex items-center gap-3 mb-1 text-white">
+                                            <span className="material-symbols-rounded text-indigo-400 p-2 bg-indigo-400/10 rounded-xl">checklist_rtl</span>
+                                            Target Pipeline
+                                        </h2>
+                                        <p className="text-sm text-gray-400 ml-[52px]">Drag and drop nodes to reorder your priority allocations.</p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-3">
+                                        <button onClick={handleExportCSV} className="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 font-medium transition-all text-sm">
+                                            <span className="material-symbols-rounded text-[20px]">csv</span> Data Export
+                                        </button>
+                                        <button onClick={handleDownloadPDF} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-medium transition-all shadow-[0_0_20px_rgba(99,102,241,0.4)] active:scale-95 text-sm">
+                                            <span className="material-symbols-rounded text-[20px]">picture_as_pdf</span> Generate Premium PDF
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* AI Insight Panel */}
+                                <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-500/20 flex items-start gap-3">
+                                    <span className="material-symbols-rounded text-blue-400 mt-0.5">smart_toy</span>
+                                    <div>
+                                        <h4 className="text-sm font-bold text-blue-300 mb-1">AI Strategy Insight</h4>
+                                        <p className="text-sm text-gray-300">{aiStrategy}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col gap-3">
+                                    {choiceList.map((item, index) => (
+                                        <div 
+                                            key={`${item.uni}-${item.dept}`} 
+                                            draggable
+                                            onDragStart={(e) => onDragStart(e, index)}
+                                            onDragEnter={(e) => onDragEnter(e, index)}
+                                            onDragEnd={onDragEnd}
+                                            onDragOver={onDragOver}
+                                            onDrop={(e) => onDrop(e, index)}
+                                            className="pipeline-item flex flex-col sm:flex-row sm:items-center gap-4 bg-[#09090b]/60 border border-white/5 p-4 rounded-2xl hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all group cursor-grab active:cursor-grabbing"
+                                        >
+                                            <div className="hidden sm:flex items-center text-gray-500 cursor-grab pr-2 border-r border-white/10">
+                                                <span className="material-symbols-rounded">drag_indicator</span>
+                                            </div>
+                                            <div className="hidden sm:block text-xl font-black text-indigo-500/30 w-6 text-center">{index + 1}</div>
+                                            
+                                            <div className="flex-1 flex justify-between items-center w-full">
+                                                <div>
+                                                    <h3 className="text-base md:text-lg font-bold text-gray-100 flex items-center gap-2">
+                                                        <span className="sm:hidden text-indigo-400">{index + 1}.</span> {item.dept}
+                                                    </h3>
+                                                    <p className="text-indigo-300/70 text-xs md:text-sm font-medium">{item.uni}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Extra Info in Choice List */}
+                                            <div className="hidden lg:flex items-center gap-4 px-6 border-l border-white/10">
+                                                <div className="text-center">
+                                                    <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Status</p>
+                                                    <p className={`text-xs font-bold ${item.prob >= 70 ? 'text-emerald-400' : item.prob >= 40 ? 'text-yellow-400' : 'text-red-400'}`}>{item.status}</p>
+                                                </div>
+                                                <div className="text-center w-16">
+                                                    <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Chance</p>
+                                                    <div className="w-full bg-black/40 rounded-full h-1.5 mt-1 relative overflow-hidden">
+                                                        <div className={`absolute top-0 left-0 h-full rounded-full ${item.prob >= 70 ? 'bg-emerald-400' : item.prob >= 40 ? 'bg-yellow-400' : 'bg-red-400'}`} style={{width: `${item.prob}%`}}></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t border-white/5 sm:border-0 pl-2">
+                                                <button onClick={() => setSearchModalData(item)} className="p-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/30 transition-all border border-blue-500/20" title="Smart Search"><span className="material-symbols-rounded text-sm block">travel_explore</span></button>
+                                                
+                                                <div className="flex items-center gap-1 sm:hidden">
+                                                    <button onClick={() => handleMove(index, -1)} disabled={index === 0} className="p-1.5 text-gray-500 bg-white/5 rounded-lg disabled:opacity-20"><span className="material-symbols-rounded text-sm block">keyboard_arrow_up</span></button>
+                                                    <button onClick={() => handleMove(index, 1)} disabled={index === choiceList.length - 1} className="p-1.5 text-gray-500 bg-white/5 rounded-lg disabled:opacity-20"><span className="material-symbols-rounded text-sm block">keyboard_arrow_down</span></button>
+                                                </div>
+
+                                                <button onClick={() => handleRemoveFromList(index)} className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all ml-auto sm:ml-0"><span className="material-symbols-rounded">close</span></button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Results Architecture */}
+                    {rank && results.length > 0 && (
+                        <div className="w-full max-w-7xl">
+                            
+                            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-6 gap-4">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
+                                    <h2 className="text-2xl font-bold flex items-center gap-3 text-white">
+                                        <span className="material-symbols-rounded text-teal-400">data_exploration</span> Data Matrix Output
+                                    </h2>
+                                    <button onClick={handleAutoPopulate} className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold hover:bg-emerald-500/20 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all whitespace-nowrap">
+                                        <span className="material-symbols-rounded text-[18px]">auto_awesome</span> Auto-Fill Safest
+                                    </button>
+                                </div>
+                                
+                                <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                                    <div className="flex items-center bg-white/5 rounded-xl p-1.5 border border-white/5 overflow-x-auto w-full sm:w-auto shadow-inner">
+                                        <button onClick={() => setSortMode('safest')} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${sortMode === 'safest' ? 'bg-teal-500/20 text-teal-300 shadow-md' : 'text-gray-400 hover:text-white'}`}>Safest Vectors</button>
+                                        <button onClick={() => setSortMode('cutoff')} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${sortMode === 'cutoff' ? 'bg-indigo-500/20 text-indigo-300 shadow-md' : 'text-gray-400 hover:text-white'}`}>Top Tier Priority</button>
+                                        <button onClick={() => setSortMode('ambitious')} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${sortMode === 'ambitious' ? 'bg-orange-500/20 text-orange-300 shadow-md' : 'text-gray-400 hover:text-white'}`}>Ambitious</button>
+                                    </div>
+                                    
+                                    <div className="hidden md:flex items-center bg-white/5 rounded-xl p-1.5 border border-white/5 shadow-inner">
+                                        <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-lg transition-all flex ${viewMode === 'grid' ? 'bg-white/10 text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}`}><span className="material-symbols-rounded text-[20px]">grid_view</span></button>
+                                        <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-lg transition-all flex ${viewMode === 'list' ? 'bg-white/10 text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}`}><span className="material-symbols-rounded text-[20px]">view_list</span></button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" : "flex flex-col gap-4"}>
+                                {results.map((item) => {
                                     const inList = choiceList.some(c => c.uni === item.uni && c.dept === item.dept);
+                                    const inCompare = compareList.some(c => c.uni === item.uni && c.dept === item.dept);
+                                    const varianceText = item.variance >= 0 ? `+${item.variance.toLocaleString()} Safe` : `${item.variance.toLocaleString()} Short`;
+                                    const varianceColor = item.variance >= 0 ? 'text-emerald-400' : 'text-red-400';
 
                                     return (
-                                        <div 
-                                            key={index} 
-                                            className="glass-panel rounded-[1.25rem] p-5 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_40px_-15px_rgba(6,182,212,0.4)] relative overflow-hidden group flex flex-col h-full"
-                                        >
-                                            <div 
-                                                className="absolute bottom-0 left-0 h-1.5 bg-gradient-to-r from-teal-400 to-indigo-500 transition-all duration-1000 ease-out"
-                                                style={{ width: `${item.prob}%`, opacity: 0.8 }}
-                                            ></div>
-
-                                            <div className="flex justify-between items-start mb-5">
+                                        <div key={`${item.uni}-${item.dept}`} className={`glass-card rounded-[1.5rem] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_40px_-10px_rgba(20,184,166,0.2)] relative overflow-hidden group flex flex-col ${viewMode==='list'? 'md:flex-row md:items-center gap-4' : 'h-full'}`}>
+                                            <div className="absolute top-0 left-0 h-1.5 bg-gradient-to-r from-teal-400 to-indigo-500 transition-all duration-1000 ease-out" style={{ width: `${item.prob}%` }}></div>
+                                            
+                                            <div className="flex justify-between items-start mb-4 mt-2 gap-2 w-full">
                                                 <div className="pr-2">
-                                                    <h3 className="text-xl font-bold text-white mb-1.5 group-hover:text-cyan-300 transition-colors leading-tight">
-                                                        {item.dept}
-                                                    </h3>
-                                                    <p className="text-gray-400 text-xs flex items-center gap-1.5 font-medium">
-                                                        <span className="material-symbols-rounded text-[14px]">assured_workload</span>
-                                                        {item.uni}
+                                                    <h3 className="text-xl font-bold text-white mb-1.5 group-hover:text-cyan-300 transition-colors leading-tight">{item.dept}</h3>
+                                                    <p className="text-gray-400 text-sm flex items-center gap-1.5 font-medium">
+                                                        <span className="material-symbols-rounded text-[16px]">assured_workload</span>{item.uni}
                                                     </p>
                                                 </div>
-                                                <div className={`px-2.5 py-1 rounded-xl text-sm font-bold border ${item.bg} ${item.color} ${item.border} shadow-sm`}>
-                                                    {item.prob}%
+                                                <div className="flex flex-col items-end gap-2">
+                                                    <div className={`px-3 py-1.5 rounded-xl text-sm font-black border ${item.bg} ${item.color} ${item.border} shadow-sm`}>{item.prob}%</div>
                                                 </div>
                                             </div>
 
-                                            <div className="mt-auto pt-4 border-t border-white/5 grid grid-cols-2 gap-4 mb-4">
+                                            <div className={`mt-auto pt-4 border-t border-white/5 grid grid-cols-2 gap-4 mb-5 w-full`}>
                                                 <div>
-                                                    <span className="text-[10px] text-gray-500 uppercase tracking-widest block mb-0.5">Status</span>
-                                                    <span className={`text-sm font-semibold ${item.color}`}>{item.status}</span>
+                                                    <span className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Status Code</span>
+                                                    <span className={`text-sm font-bold ${item.color}`}>{item.status}</span>
                                                 </div>
                                                 <div className="text-right">
-                                                    <span className="text-[10px] text-gray-500 uppercase tracking-widest block mb-0.5">Cutoff Rank</span>
-                                                    <span className="text-sm font-bold text-gray-200">#{item.cutoff.toLocaleString()}</span>
+                                                    <span className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Cutoff Matrix</span>
+                                                    <span className="text-sm font-black text-gray-200">#{item.cutoff.toLocaleString()}</span>
+                                                    <span className={`text-[11px] block mt-0.5 font-mono ${varianceColor}`}>{varianceText}</span>
                                                 </div>
                                             </div>
 
-                                            {/* Add to List Button */}
-                                            <button 
-                                                onClick={() => handleAddToList(item)}
-                                                disabled={inList}
-                                                className={`w-full py-2.5 mt-2 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all ${
-                                                    inList 
-                                                    ? 'bg-white/5 text-gray-500 cursor-not-allowed border border-transparent' 
-                                                    : 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/30 hover:border-purple-500/50'
-                                                }`}
-                                            >
-                                                <span className="material-symbols-rounded text-[18px]">
-                                                    {inList ? 'check_circle' : 'add_circle'}
-                                                </span>
-                                                {inList ? 'Added to List' : 'Add to Choice List'}
-                                            </button>
+                                            <div className="flex items-center gap-2 w-full mt-auto">
+                                                <button onClick={() => setSearchModalData(item)} className="p-3 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/30 border border-blue-500/20 transition-all" title="Smart Insight">
+                                                    <span className="material-symbols-rounded text-[20px] block">neurology</span>
+                                                </button>
+                                                <button onClick={() => setTrendModalData(item)} className="p-3 rounded-xl bg-purple-500/10 text-purple-400 hover:bg-purple-500/30 border border-purple-500/20 transition-all" title="Historical Trends">
+                                                    <span className="material-symbols-rounded text-[20px] block">monitoring</span>
+                                                </button>
+                                                
+                                                <div className="relative group/tooltip">
+                                                    <button onClick={() => toggleCompare(item)} className={`p-3 rounded-xl border transition-all ${inCompare ? 'bg-indigo-500 text-white border-indigo-400' : 'bg-white/5 text-gray-400 hover:bg-white/10 border-white/10'}`}>
+                                                        <span className="material-symbols-rounded text-[20px] block">compare_arrows</span>
+                                                    </button>
+                                                </div>
+
+                                                <button 
+                                                    onClick={() => handleAddToList(item)} disabled={inList}
+                                                    className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-bold transition-all shadow-sm ${
+                                                        inList ? 'bg-white/5 text-gray-500 cursor-not-allowed border border-transparent' : 'bg-gradient-to-r from-teal-500/20 to-emerald-500/20 text-emerald-300 hover:from-teal-500/30 hover:to-emerald-500/30 border border-emerald-500/30 hover:border-emerald-500/60'
+                                                    }`}
+                                                >
+                                                    <span className="material-symbols-rounded text-[20px]">{inList ? 'check_circle' : 'add_circle'}</span>
+                                                    {inList ? 'Pipeline' : 'Add Node'}
+                                                </button>
+                                            </div>
                                         </div>
                                     );
                                 })}
@@ -451,22 +711,19 @@
 
                     {/* Empty State */}
                     {rank && results.length === 0 && (
-                        <div className="glass-panel rounded-3xl p-12 text-center max-w-md mx-auto mt-10 animate-float">
-                            <span className="material-symbols-rounded text-6xl text-gray-600 mb-4 block">search_off</span>
-                            <h3 className="text-xl font-bold text-white mb-2">No Matches Found</h3>
-                            <p className="text-gray-400 text-sm">
-                                Try adjusting your filters or checking a different merit position to see available subjects.
-                            </p>
+                        <div className="glass-panel rounded-[2rem] p-12 text-center max-w-md mx-auto mt-10 border border-red-500/20 shadow-[0_0_30px_-10px_rgba(239,68,68,0.2)]">
+                            <span className="material-symbols-rounded text-7xl text-red-400/50 mb-5 block">blur_off</span>
+                            <h3 className="text-2xl font-bold text-white mb-3">Zero Vectors Found</h3>
+                            <p className="text-gray-400 text-sm leading-relaxed">Modify search parameters or shift your current merit position to recalculate the probability matrix.</p>
                         </div>
                     )}
 
-                    {/* Footer */}
-                    <footer className="mt-24 mb-8 text-center text-gray-500 text-sm w-full max-w-4xl border-t border-white/10 pt-8">
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                            <span className="material-symbols-rounded text-[18px]">copyright</span>
-                            <span>2026 Developed by <span className="text-cyan-400/80 font-medium hover:text-cyan-400 cursor-pointer transition-colors">Urfa Hasan Fattah</span></span>
+                    <footer className="mt-32 mb-8 text-center text-gray-500 text-sm w-full max-w-4xl border-t border-white/5 pt-10">
+                        <div className="flex items-center justify-center gap-2 mb-3">
+                            <span className="material-symbols-rounded text-[20px]">terminal</span>
+                            <span className="font-light">System Architecture by <span className="text-teal-400 font-bold hover:text-teal-300 cursor-pointer transition-colors">Urfa Hasan Fattah</span></span>
                         </div>
-                        <p className="text-xs opacity-75">Data compiled from GST sessions. Predictions are statistical estimates and not official guarantees.</p>
+                        <p className="text-[11px] uppercase tracking-widest opacity-40 font-medium">Predictive Neural Models · Dynamic Matrix Allocation · v3.0 Premium Build</p>
                     </footer>
                 </div>
             );

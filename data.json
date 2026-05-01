@@ -766,5 +766,173 @@
         "dept": "Management (Business Studies)",
         "cutoff": 20461,
         "unit": "A Unit"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "Pharmacy",
+        "cutoff": 517,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "Microbiology",
+        "cutoff": 2112,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "GEBT",
+        "cutoff": 1872,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "FMB",
+        "cutoff": 3215,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "BMB",
+        "cutoff": 2193,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "EEE",
+        "cutoff": 386,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "CSE",
+        "cutoff": 521,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "BME",
+        "cutoff": 2699,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "IPE",
+        "cutoff": 1510,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "PME",
+        "cutoff": 3954,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "TE",
+        "cutoff": 3114,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "ChE",
+        "cutoff": 824,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "CDM",
+        "cutoff": 12371,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "NFT",
+        "cutoff": 4722,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "EST",
+        "cutoff": 5784,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "FE",
+        "cutoff": 6853,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "PESS",
+        "cutoff": 17,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "PTR",
+        "cutoff": 5748,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "NHS",
+        "cutoff": 11839,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "Physics",
+        "cutoff": 6814,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "Chemistry",
+        "cutoff": 3669,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "Mathematics",
+        "cutoff": 9890,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "ASDS",
+        "cutoff": 3974,
+        "unit": "Unit-A"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "English",
+        "cutoff": 1020,
+        "unit": "Unit-B"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "AIS",
+        "cutoff": 1194,
+        "unit": "Unit-C"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "Management",
+        "cutoff": 4056,
+        "unit": "Unit-C"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "Finance & Banking",
+        "cutoff": 2339,
+        "unit": "Unit-C"
+    },
+    {
+        "uni": "Jashore University of Science and Technology",
+        "dept": "Marketing",
+        "cutoff": 4281,
+        "unit": "Unit-C"
     }
 ]
