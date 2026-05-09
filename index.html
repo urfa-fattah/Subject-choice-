@@ -31,7 +31,6 @@
                         'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                         'slide-up': 'slideUp 0.4s ease-out forwards',
                         'scale-in': 'scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                        'typing-dot': 'typingDot 1.2s ease-in-out infinite',
                         'dropdown-in': 'dropdownIn 0.2s ease-out forwards',
                     },
                     keyframes: {
@@ -50,10 +49,6 @@
                         'scaleIn': {
                             '0%': { transform: 'scale(0.95)', opacity: 0 },
                             '100%': { transform: 'scale(1)', opacity: 1 }
-                        },
-                        'typingDot': {
-                            '0%, 60%, 100%': { transform: 'scale(0.6)', opacity: 0.3 },
-                            '30%': { transform: 'scale(1)', opacity: 1 }
                         },
                         'dropdownIn': {
                             '0%': { transform: 'translateY(-8px)', opacity: 0 },
@@ -120,53 +115,6 @@
         .chart-bar {
             transition: height 1s ease-out;
         }
-        .message-code {
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 8px;
-            padding: 8px 12px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.85rem;
-            overflow-x: auto;
-            margin: 6px 0;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-        }
-        .message-code code {
-            color: #a5b4fc;
-        }
-        .typing-dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #818cf8;
-            animation: typingDot 1.2s ease-in-out infinite;
-        }
-        .typing-dot:nth-child(2) {
-            animation-delay: 0.15s;
-        }
-        .typing-dot:nth-child(3) {
-            animation-delay: 0.3s;
-        }
-        .model-selector {
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 10px;
-            padding: 4px 10px;
-            color: #a5b4fc;
-            font-size: 0.7rem;
-            font-weight: 600;
-            cursor: pointer;
-            outline: none;
-            transition: all 0.2s;
-        }
-        .model-selector:hover {
-            border-color: rgba(165, 180, 252, 0.4);
-            background: rgba(99, 102, 241, 0.1);
-        }
-        .model-selector option {
-            background: #0f172a;
-            color: white;
-        }
         .multi-select-dropdown {
             max-height: 280px;
             overflow-y: auto;
@@ -215,6 +163,16 @@
         .checkbox-custom:hover {
             border-color: rgba(20, 184, 166, 0.6);
         }
+        .quick-link-btn {
+            transition: all 0.2s;
+        }
+        .quick-link-btn:hover {
+            transform: scale(1.05);
+        }
+        .research-badge {
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+        }
     </style>
 </head>
 <body>
@@ -259,241 +217,11 @@
                 span className = "material-symbols-rounded" > { type === 'success' ? 'check_circle' : type === 'error' ? 'error' :
                         'info' } < /span> <
                 p className = "font-medium text-sm whitespace-nowrap" > { message } < /p> <
-                button onClick = { onClose } className = "ml-2 hover:opacity-70" > < span className = "material-symbols-rounded text-sm block" > close < /span></button >
+                button onClick = { onClose }
+                className = "ml-2 hover:opacity-70" > < span className = "material-symbols-rounded text-sm block" > close < /span></button >
                 <
                 /div>
             );
-
-            // --- ENHANCED AI Chat Widget with Model Selection & Advanced Features ---
-            const AIChatWidget = () => {
-                const [isOpen, setIsOpen] = useState(false);
-                const [messages, setMessages] = useState(() => {
-                    const saved = localStorage.getItem('unipro_chat_history');
-                    if (saved) {
-                        try { return JSON.parse(saved); } catch (e) {}
-                    }
-                    return [{ sender: 'ai',
-                        text: "Hello! I'm the public AI assistant for UniPro. How can I help you map your academic roadmap today?" }];
-                });
-                const [input, setInput] = useState('');
-                const [isLoading, setIsLoading] = useState(false);
-                const [selectedModel, setSelectedModel] = useState(() => {
-                    return localStorage.getItem('unipro_chat_model') || 'openai';
-                });
-                const [showModelInfo, setShowModelInfo] = useState(false);
-                const messagesEndRef = useRef(null);
-
-                const availableModels = [
-                    { id: 'openai', label: 'GPT-4 (Default)', description: 'Best for complex reasoning & detailed answers' },
-                    { id: 'claude-3-haiku', label: 'Claude 3 Haiku', description: 'Fast, concise, and cost-efficient' },
-                    { id: 'llama-3-8b', label: 'Llama 3 8B', description: 'Open-source, balanced performance' },
-                    { id: 'mistral-7b', label: 'Mistral 7B', description: 'Lightweight & fast for routine queries' },
-                    { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash',
-                        description: 'Google\'s efficient multimodal model' },
-                ];
-
-                const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-
-                useEffect(() => { scrollToBottom(); }, [messages, isLoading]);
-                useEffect(() => {
-                    localStorage.setItem('unipro_chat_history', JSON.stringify(messages));
-                }, [messages]);
-                useEffect(() => {
-                    localStorage.setItem('unipro_chat_model', selectedModel);
-                }, [selectedModel]);
-
-                const handleSend = async () => {
-                    if (!input.trim()) return;
-                    const userMsg = input.trim();
-                    const newMessages = [...messages, { sender: 'user', text: userMsg }];
-                    setMessages(newMessages);
-                    setInput('');
-                    setIsLoading(true);
-
-                    try {
-                        const systemPrompt =
-                            "You are an academic AI assistant for UniPro, a university admission predictor. Answer briefly, helpfully, and accurately. Use markdown for formatting code or lists where appropriate.";
-                        const fullPrompt =
-                            `System: ${systemPrompt}\n\nUser: ${userMsg}\n\nAssistant:`;
-                        const url =
-                            `https://text.pollinations.ai/${encodeURIComponent(fullPrompt)}?model=${selectedModel}`;
-                        const res = await fetch(url);
-                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                        const text = await res.text();
-                        let cleaned = text.trim();
-                        if (cleaned.startsWith('Assistant:')) cleaned = cleaned.substring(10).trim();
-                        setMessages(prev => [...prev, { sender: 'ai', text: cleaned }]);
-                    } catch (error) {
-                        console.error('Pollinations API Error:', error);
-                        setMessages(prev => [...prev, {
-                            sender: 'ai',
-                            text: `⚠️ Neural link disconnected. The public AI service is currently unreachable. (Model: ${selectedModel})\n\nTry switching to another model or try again later.`
-                        }]);
-                    } finally {
-                        setIsLoading(false);
-                    }
-                };
-
-                const handleClearChat = () => {
-                    if (messages.length > 1 || messages[0]?.sender !== 'ai') {
-                        setMessages([{ sender: 'ai',
-                            text: "Chat cleared. How can I help you with your academic roadmap?" }]);
-                        localStorage.removeItem('unipro_chat_history');
-                    }
-                };
-
-                const handleKeyPress = (e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSend();
-                    }
-                };
-
-                const renderMessage = (msg) => {
-                    let text = msg.text;
-                    let formatted = text
-                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                        .replace(/\`\`\`(.*?)\`\`\`/gs,
-                            '<div class="message-code"><code>$1</code></div>')
-                        .replace(/\`(.*?)\`/g,
-                            '<code style="background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;font-size:0.85em;">$1</code>'
-                            )
-                        .replace(/\n/g, '<br>');
-                    return <div dangerouslySetInnerHTML = { { __html: formatted } } />;
-                };
-
-                const currentModelLabel = availableModels.find(m => m.id === selectedModel)?.label || selectedModel;
-
-                return ( <
-                    div className = "fixed bottom-6 right-6 z-50 flex flex-col items-end" > {
-                        isOpen && ( <
-                            div className = "bg-[#09090b]/95 backdrop-blur-xl border border-white/10 rounded-2xl w-[340px] md:w-[400px] h-[520px] mb-4 shadow-2xl flex flex-col overflow-hidden animate-scale-in" >
-                            <
-                            div className = "bg-indigo-600/20 border-b border-white/5 p-4 flex justify-between items-center flex-shrink-0" >
-                            <
-                            div className = "flex items-center gap-2" >
-                            <
-                            span className = "material-symbols-rounded text-indigo-400" > robot_2 < /span> <
-                            div >
-                            <
-                            h3 className = "font-bold text-white text-sm" > Public AI Assistant < /h3> <
-                            p className = "text-[10px] text-indigo-300" > Powered by Open Neural Nets • Free < /p> <
-                            /div> <
-                            /div> <
-                            div className = "flex items-center gap-2" >
-                            <
-                            button onClick = { handleClearChat }
-                            className = "text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors"
-                            title = "Clear chat" >
-                            <
-                            span className = "material-symbols-rounded text-[18px]" > delete_sweep < /span> <
-                            /button> <
-                            button onClick = {
-                                () => setIsOpen(false) }
-                            className = "text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors" >
-                            <
-                            span className = "material-symbols-rounded" > close < /span> <
-                            /button> <
-                            /div> <
-                            /div>
-
-                            <
-                            div className = "flex-1 overflow-y-auto p-4 flex flex-col gap-3 chat-scrollbar" > {
-                                messages.map((msg, i) => ( <
-                                    div key = { i }
-                                    className = { `max-w-[88%] p-3.5 rounded-2xl text-sm leading-relaxed ${
-                                            msg.sender === 'user' 
-                                            ? 'bg-indigo-500/90 text-white self-end rounded-tr-sm shadow-md' 
-                                            : 'bg-white/5 text-gray-200 self-start rounded-tl-sm border border-white/5'
-                                        }` } >
-                                    {
-                                        renderMessage(msg) } <
-                                    /div>
-                                ))
-                            } {
-                                isLoading && ( <
-                                    div className = "bg-white/5 text-gray-400 self-start p-3 rounded-2xl rounded-tl-sm border border-white/5 text-sm flex items-center gap-2" >
-                                    <
-                                    span className = "typing-dot" > < /span> <
-                                    span className = "typing-dot" > < /span> <
-                                    span className = "typing-dot" > < /span> <
-                                    span className = "text-[10px] text-gray-500 ml-1" > { currentModelLabel } < /span> <
-                                    /div>
-                                )
-                            } <
-                            div ref = { messagesEndRef }
-                            /> <
-                            /div>
-
-                            <
-                            div className = "p-3 border-t border-white/5 bg-black/20 flex-shrink-0" >
-                            <
-                            div className = "flex gap-2 mb-2" > {
-                                showModelInfo && ( <
-                                    div className = "absolute bottom-full left-0 mb-2 p-3 bg-[#0f172a] border border-indigo-500/30 rounded-xl text-xs text-gray-300 w-[280px] shadow-2xl z-10" >
-                                    <
-                                    p className = "font-bold text-indigo-300 mb-1" > Model: { currentModelLabel } < /p> <
-                                    p > { availableModels.find(m => m.id === selectedModel)?.description ||
-                                            'Fast, efficient public model.' } < /p> <
-                                    p className = "mt-2 text-[10px] text-gray-500" > API: text.pollinations.ai • Free &
-                                    Public < /p> <
-                                    /div>
-                                )
-                            } <
-                            select
-                            value = { selectedModel }
-                            onChange = {
-                                (e) => setSelectedModel(e.target.value) }
-                            className = "model-selector flex-1 min-w-0" >
-                            {
-                                availableModels.map(m => ( <
-                                    option key = { m.id }
-                                    value = { m.id } > { m.label } < /option>
-                                ))
-                            } <
-                            /select> <
-                            button onClick = {
-                                () => setShowModelInfo(!showModelInfo) }
-                            className = "text-indigo-400 hover:text-indigo-300 p-1.5 rounded-lg hover:bg-indigo-500/10 transition-colors relative" >
-                            <
-                            span className = "material-symbols-rounded text-[20px]" > info < /span> <
-                            /button> <
-                            /div> <
-                            div className = "flex gap-2" >
-                            <
-                            textarea
-                            value = { input }
-                            onChange = {
-                                (e) => setInput(e.target.value) }
-                            onKeyDown = { handleKeyPress }
-                            placeholder = "Ask anything about admissions..."
-                            className = "flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-400/50 resize-none min-h-[44px] max-h-[80px] transition-colors"
-                            rows = "1"
-                            /> <
-                            button onClick = { handleSend }
-                            disabled = { isLoading || !input.trim() }
-                            className = "bg-indigo-500 hover:bg-indigo-400 text-white p-2.5 rounded-xl disabled:opacity-40 disabled:hover:bg-indigo-500 transition-all shadow-[0_0_12px_rgba(99,102,241,0.2)] flex-shrink-0" >
-                            <
-                            span className = "material-symbols-rounded text-[22px] block" > send < /span> <
-                            /button> <
-                            /div> <
-                            /div> <
-                            /div>
-                        )
-                    } {
-                        !isOpen && ( <
-                            button onClick = {
-                                () => setIsOpen(true) }
-                            className = "bg-indigo-600 hover:bg-indigo-500 text-white p-4 rounded-full shadow-[0_0_25px_rgba(79,70,229,0.5)] transition-transform hover:scale-110 flex items-center justify-center relative" >
-                            <
-                            span className = "material-symbols-rounded text-2xl" > forum < /span> <
-                            span className = "absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full animate-pulse" > < /span> <
-                            /button>
-                        )
-                    } <
-                    /div>
-                );
-            };
 
             // --- NOTICE MODAL ---
             const NoticeModal = ({ isOpen, onClose }) => {
@@ -510,7 +238,7 @@
                             const mockData = {
                                 texts: [
                                     { id: 1, title: "Welcome to UniPro v3.1",
-                                        content: "Multi-subject filtering is now live! Select multiple subjects to compare across departments.",
+                                        content: "Multi-subject & Multi-university filtering is now live! Select multiple universities and subjects to compare across departments.",
                                         date: "2026-05-10" },
                                     { id: 2, title: "Server Maintenance Notice",
                                         content: "Systems will be down for 2 hours on Sunday for deep-learning updates.",
@@ -644,15 +372,16 @@
                 );
             };
 
-            // --- SmartSearchModal ---
+            // --- ENHANCED SmartSearchModal with Research Hub ---
             const SmartSearchModal = ({ isOpen, onClose, data }) => {
                 const [info, setInfo] = useState({ loading: true, text: '' });
+                const [activeTab, setActiveTab] = useState('overview');
 
                 useEffect(() => {
                     if (isOpen && data) {
                         setInfo({ loading: true, text: '' });
                         fetch(
-                                `https://en.wikipedia.org/w/api.php?action=query&origin=*&prop=extracts&exsentences=4&explaintext=1&titles=${encodeURIComponent(data.uni)}&format=json`
+                                `https://en.wikipedia.org/w/api.php?action=query&origin=*&prop=extracts&exsentences=6&explaintext=1&titles=${encodeURIComponent(data.uni)}&format=json`
                                 ).then(res => res.json()).then(resData => {
                                 const pages = resData.query.pages;
                                 const pageId = Object.keys(pages)[0];
@@ -668,43 +397,91 @@
                     }
                 }, [isOpen, data]);
 
-                if (!isOpen) return null;
+                if (!isOpen || !data) return null;
+
+                const uniSlug = encodeURIComponent(data.uni);
+                const deptSlug = encodeURIComponent(data.dept);
+
+                const researchLinks = [
+                    { label: 'Official Website', icon: 'public', url: `https://www.google.com/search?q=${uniSlug}+official+website` },
+                    { label: 'Admission Info', icon: 'assignment', url: `https://www.google.com/search?q=${uniSlug}+${deptSlug}+admission+requirements` },
+                    { label: 'Department Page', icon: 'school', url: `https://www.google.com/search?q=${uniSlug}+${deptSlug}+department` },
+                    { label: 'Wikipedia Entry', icon: 'menu_book', url: `https://en.wikipedia.org/wiki/${uniSlug}` },
+                    { label: 'Rankings & Reviews', icon: 'star', url: `https://www.google.com/search?q=${uniSlug}+ranking+reviews` },
+                    { label: 'Contact & Location', icon: 'place', url: `https://www.google.com/search?q=${uniSlug}+contact+address` },
+                ];
+
                 return ( <
-                    div className = "fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" >
+                    div className = "fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4" >
                     <
-                    div className = "glass-panel w-full max-w-lg rounded-3xl p-6 relative shadow-2xl border border-white/10 animate-scale-in" >
+                    div className = "glass-panel w-full max-w-4xl h-[85vh] rounded-3xl relative shadow-2xl border border-white/10 flex flex-col animate-scale-in overflow-hidden" >
                     <
                     button onClick = { onClose }
-                    className = "absolute top-4 right-4 p-2 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-all" > < span className = "material-symbols-rounded block" > close < /span></button >
+                    className = "absolute top-4 right-4 p-2 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-all z-10" > < span className = "material-symbols-rounded block" > close < /span></button >
+
                     <
-                    div className = "flex items-center gap-3 mb-4" >
+                    div className = "p-6 border-b border-white/10 flex-shrink-0" >
                     <
-                    div className = "p-3 bg-blue-500/20 rounded-xl text-blue-400" > < span className = "material-symbols-rounded" > travel_explore < /span></div >
+                    div className = "flex flex-col md:flex-row md:items-start md:justify-between gap-3" >
                     <
                     div >
                     <
-                    h3 className = "text-xl font-bold text-white" > { data.uni } < /h3> <
-                    p className = "text-blue-300 text-sm font-medium" > { data.dept } < /p> <
+                    h2 className = "text-2xl font-bold text-white flex items-center gap-3" >
+                    <
+                    span className = "material-symbols-rounded text-blue-400 p-2 bg-blue-500/10 rounded-xl" > travel_explore < /span> { data.uni } <
+                    /h2> <
+                    p className = "text-blue-300 text-sm font-medium mt-1 flex items-center gap-2" >
+                    <
+                    span className = "material-symbols-rounded text-[16px]" > school < /span> { data.dept } <
+                    span className = "text-gray-500 text-xs bg-white/5 px-2 py-0.5 rounded-full ml-2" > Cutoff: #{data
+                        .cutoff} < /span> <
+                    /p> <
                     /div> <
-                    /div> <
-                    div className = "bg-[#09090b]/50 border border-white/5 rounded-2xl p-5 min-h-[120px]" > {
-                        info.loading ? ( <
-                            div className = "flex items-center gap-3 text-gray-400 animate-pulse" > < span className = "material-symbols-rounded animate-spin" > cyclone < /span> Fetching Neural Datasets...</div >
-                        ) : ( <
-                            p className = "text-gray-300 text-sm leading-relaxed" > { info.text } < /p>
-                        )
+                    div className = "flex gap-2 overflow-x-auto flex-shrink-0" > {
+                        ['overview', 'research'].map(tab => ( <
+                            button key = { tab }
+                            onClick = {
+                                () => setActiveTab(tab) }
+                            className = { `px-4 py-1.5 rounded-xl text-sm font-semibold capitalize transition-all whitespace-nowrap ${activeTab === tab ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'}` } >
+                            { tab === 'overview' ? '📖 Overview' : '🔍 Research Hub' } <
+                            /button>
+                        ))
                     } <
                     /div> <
-                    div className = "mt-4 flex gap-2" >
+                    /div> <
+                    /div>
+
                     <
-                    a href = { `https://en.wikipedia.org/wiki/${encodeURIComponent(data.uni)}` }
-                    target = "_blank"
-                    className = "flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-center text-sm font-medium transition-all text-gray-300" > Read
-                    Wiki < /a> <
-                    a href = { `https://www.google.com/search?q=${encodeURIComponent(data.uni + ' ' + data.dept + ' admission requirements')}` }
-                    target = "_blank"
-                    className = "flex-1 py-2.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 text-center text-sm font-medium transition-all" >
-                    External Deep Search < /a> <
+                    div className = "flex-1 overflow-y-auto p-6" > {
+                        activeTab === 'overview' ? ( <
+                            div className = "bg-[#09090b]/50 border border-white/5 rounded-2xl p-6 min-h-[200px]" > {
+                                info.loading ? ( <
+                                    div className = "flex items-center gap-3 text-gray-400 animate-pulse" > < span className = "material-symbols-rounded animate-spin" > cyclone < /span> Fetching Neural Datasets...</div >
+                                ) : ( <
+                                    p className = "text-gray-300 text-sm leading-relaxed" > { info.text } < /p>
+                                )
+                            } <
+                            /div>
+                        ) : ( <
+                            div className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" > {
+                                researchLinks.map((link, idx) => ( <
+                                    a key = { idx }
+                                    href = { link.url }
+                                    target = "_blank"
+                                    rel = "noopener noreferrer"
+                                    className = "research-badge p-4 rounded-2xl flex flex-col items-center gap-2 text-center hover:bg-indigo-500/20 transition-all group" >
+                                    <
+                                    span className = "material-symbols-rounded text-3xl text-indigo-400 group-hover:text-indigo-300 transition-colors" > { link
+                                        .icon } < /span> <
+                                    span className = "text-sm font-medium text-gray-200 group-hover:text-white" > { link
+                                        .label } < /span> <
+                                    span className = "material-symbols-rounded text-[14px] text-gray-500 group-hover:text-gray-300" > open_in_new < /span> <
+                                    /a>
+                                ))
+                            } <
+                            /div>
+                        )
+                    } <
                     /div> <
                     /div> <
                     /div>
@@ -749,6 +526,64 @@
                 );
             };
 
+            // --- Research Hub Modal (standalone) ---
+            const ResearchHubModal = ({ isOpen, onClose, data }) => {
+                if (!isOpen || !data) return null;
+                const uniSlug = encodeURIComponent(data.uni);
+                const deptSlug = encodeURIComponent(data.dept);
+
+                const quickLinks = [
+                    { label: 'Official Website', icon: 'public', url: `https://www.google.com/search?q=${uniSlug}+official+website` },
+                    { label: 'Admission Guidelines', icon: 'assignment', url: `https://www.google.com/search?q=${uniSlug}+admission+guidelines` },
+                    { label: 'Department Details', icon: 'school', url: `https://www.google.com/search?q=${uniSlug}+${deptSlug}+department` },
+                    { label: 'Wikipedia', icon: 'menu_book', url: `https://en.wikipedia.org/wiki/${uniSlug}` },
+                    { label: 'Rankings', icon: 'star', url: `https://www.google.com/search?q=${uniSlug}+university+ranking` },
+                    { label: 'Contact Info', icon: 'place', url: `https://www.google.com/search?q=${uniSlug}+contact+address` },
+                    { label: 'Fee Structure', icon: 'payments', url: `https://www.google.com/search?q=${uniSlug}++fee+structure` },
+                    { label: 'Scholarships', icon: 'volunteer_activism', url: `https://www.google.com/search?q=${uniSlug}+scholarship` },
+                ];
+
+                return ( <
+                    div className = "fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4" >
+                    <
+                    div className = "glass-panel w-full max-w-3xl rounded-3xl p-6 relative shadow-2xl border border-white/10 animate-scale-in max-h-[90vh] overflow-y-auto" >
+                    <
+                    button onClick = { onClose }
+                    className = "absolute top-4 right-4 p-2 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-all z-10" > < span className = "material-symbols-rounded block" > close < /span></button >
+
+                    <
+                    div className = "mb-6" >
+                    <
+                    h2 className = "text-2xl font-bold text-white flex items-center gap-3" >
+                    <
+                    span className = "material-symbols-rounded text-purple-400 p-2 bg-purple-500/10 rounded-xl" > database < /span> Research Hub <
+                    /h2> <
+                    p className = "text-gray-400 text-sm mt-1" > { data.uni } • { data.dept } < /p> <
+                    /div>
+
+                    <
+                    div className = "grid grid-cols-2 md:grid-cols-4 gap-4" > {
+                        quickLinks.map((link, idx) => ( <
+                            a key = { idx }
+                            href = { link.url }
+                            target = "_blank"
+                            rel = "noopener noreferrer"
+                            className = "bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center gap-2 text-center hover:bg-indigo-500/20 hover:border-indigo-500/30 transition-all group" >
+                            <
+                            span className = "material-symbols-rounded text-2xl text-indigo-400 group-hover:text-indigo-300" > { link
+                                .icon } < /span> <
+                            span className = "text-xs font-medium text-gray-200 group-hover:text-white" > { link
+                                .label } < /span> <
+                            span className = "material-symbols-rounded text-[12px] text-gray-500 group-hover:text-gray-300" > open_in_new < /span> <
+                            /a>
+                        ))
+                    } <
+                    /div> <
+                    /div> <
+                    /div>
+                );
+            };
+
             // --- Main App ---
             const App = () => {
                 const [data, setData] = useState([]);
@@ -757,19 +592,29 @@
 
                 const [rank, setRank] = useState(() => localStorage.getItem('unipro_rank') || '');
                 const [searchKeyword, setSearchKeyword] = useState(() => localStorage.getItem('unipro_keyword') || '');
-                const [filterUni, setFilterUni] = useState(() => localStorage.getItem('unipro_uni') || 'All');
+                // Multi-university selection (array)
+                const [filterUnis, setFilterUnis] = useState(() => {
+                    const saved = localStorage.getItem('unipro_unis');
+                    if (saved) {
+                        try { return JSON.parse(saved); } catch (e) {}
+                    }
+                    const oldUni = localStorage.getItem('unipro_uni');
+                    if (oldUni && oldUni !== 'All') return [oldUni];
+                    return [];
+                });
                 // Multi-subject selection (array)
                 const [filterSubjects, setFilterSubjects] = useState(() => {
                     const saved = localStorage.getItem('unipro_subs');
                     if (saved) {
                         try { return JSON.parse(saved); } catch (e) {}
                     }
-                    // Backward compat: old single subject string
                     const oldSub = localStorage.getItem('unipro_sub');
                     if (oldSub && oldSub !== 'All') return [oldSub];
                     return [];
                 });
+                const [showUniDropdown, setShowUniDropdown] = useState(false);
                 const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
+                const [uniSearch, setUniSearch] = useState('');
                 const [subjectSearch, setSubjectSearch] = useState('');
                 const [showZeroProb, setShowZeroProb] = useState(() => {
                     const saved = localStorage.getItem('unipro_show_zero');
@@ -785,11 +630,13 @@
                 });
 
                 const [searchModalData, setSearchModalData] = useState(null);
+                const [researchHubData, setResearchHubData] = useState(null);
                 const [trendModalData, setTrendModalData] = useState(null);
                 const [compareList, setCompareList] = useState([]);
                 const [showCompareModal, setShowCompareModal] = useState(false);
                 const [isNoticeOpen, setIsNoticeOpen] = useState(false);
                 const draggedItemRef = useRef(null);
+                const uniDropdownRef = useRef(null);
                 const subjectDropdownRef = useRef(null);
 
                 const showToast = useCallback((msg, type = 'info') => {
@@ -797,19 +644,23 @@
                     setTimeout(() => setToast(null), 3000);
                 }, []);
 
-                // Close subject dropdown on outside click
+                // Close dropdowns on outside click
                 useEffect(() => {
                     const handleClickOutside = (e) => {
+                        if (uniDropdownRef.current && !uniDropdownRef.current.contains(e.target)) {
+                            setShowUniDropdown(false);
+                            setUniSearch('');
+                        }
                         if (subjectDropdownRef.current && !subjectDropdownRef.current.contains(e.target)) {
                             setShowSubjectDropdown(false);
                             setSubjectSearch('');
                         }
                     };
-                    if (showSubjectDropdown) {
+                    if (showUniDropdown || showSubjectDropdown) {
                         document.addEventListener('mousedown', handleClickOutside);
                     }
                     return () => document.removeEventListener('mousedown', handleClickOutside);
-                }, [showSubjectDropdown]);
+                }, [showUniDropdown, showSubjectDropdown]);
 
                 useEffect(() => {
                     fetch('./data.json').then(res => res.json()).then(jsonData => { setData(jsonData);
@@ -835,14 +686,21 @@
                 useEffect(() => {
                     localStorage.setItem('unipro_choice_list', JSON.stringify(choiceList));
                     localStorage.setItem('unipro_rank', rank);
-                    localStorage.setItem('unipro_uni', filterUni);
+                    localStorage.setItem('unipro_unis', JSON.stringify(filterUnis));
                     localStorage.setItem('unipro_subs', JSON.stringify(filterSubjects));
                     localStorage.setItem('unipro_keyword', searchKeyword);
                     localStorage.setItem('unipro_show_zero', showZeroProb.toString());
-                }, [choiceList, rank, filterUni, filterSubjects, searchKeyword, showZeroProb]);
+                }, [choiceList, rank, filterUnis, filterSubjects, searchKeyword, showZeroProb]);
 
-                const uniqueUnis = useMemo(() => ["All", ...new Set(data.map(item => item.uni))], [data]);
-                const uniqueSubjects = useMemo(() => [...new Set(data.map(item => item.dept).sort())], [data]);
+                const uniqueUnis = useMemo(() => [...new Set(data.map(item => item.uni)).values()].sort(), [data]);
+                const uniqueSubjects = useMemo(() => [...new Set(data.map(item => item.dept)).values()].sort(), [data]);
+
+                // Filter universities within dropdown by search
+                const filteredUniOptions = useMemo(() => {
+                    if (!uniSearch.trim()) return uniqueUnis;
+                    const q = uniSearch.toLowerCase();
+                    return uniqueUnis.filter(u => u.toLowerCase().includes(q));
+                }, [uniqueUnis, uniSearch]);
 
                 // Filter subjects within dropdown by search
                 const filteredSubjectOptions = useMemo(() => {
@@ -855,7 +713,10 @@
                     if (!rank || rank <= 0) return [];
                     let filtered = data.map(item => ({ ...item, ...calculateProbability(rank, item.cutoff) }));
 
-                    if (filterUni !== 'All') filtered = filtered.filter(item => item.uni === filterUni);
+                    // Multi-university filter: if array is non-empty, only show those universities
+                    if (filterUnis.length > 0) {
+                        filtered = filtered.filter(item => filterUnis.includes(item.uni));
+                    }
                     // Multi-subject filter: if array is non-empty, only show those subjects
                     if (filterSubjects.length > 0) {
                         filtered = filtered.filter(item => filterSubjects.includes(item.dept));
@@ -868,8 +729,7 @@
                         );
                     }
 
-                    // Only hide 0% prob when user toggles it off AND no specific subjects/university are selected
-                    if (!showZeroProb && filterUni === 'All' && filterSubjects.length === 0 && !searchKeyword) {
+                    if (!showZeroProb && filterUnis.length === 0 && filterSubjects.length === 0 && !searchKeyword) {
                         filtered = filtered.filter(item => item.prob > 0);
                     }
 
@@ -881,7 +741,7 @@
                     });
 
                     return filtered;
-                }, [data, rank, filterUni, filterSubjects, searchKeyword, sortMode, showZeroProb]);
+                }, [data, rank, filterUnis, filterSubjects, searchKeyword, sortMode, showZeroProb]);
 
                 const handleAddToList = useCallback((item) => {
                     if (!choiceList.some(c => c.uni === item.uni && c.dept === item.dept)) {
@@ -947,7 +807,6 @@
                     }
                 }, [results, choiceList, showToast]);
 
-                // Add all visible results to pipeline
                 const handleAddAllVisible = useCallback(() => {
                     const newAdditions = [];
                     for (const item of results) {
@@ -976,6 +835,14 @@
                     }
                 }, [compareList, showToast]);
 
+                const handleSelectAllUnis = () => setFilterUnis([...uniqueUnis]);
+                const handleDeselectAllUnis = () => setFilterUnis([]);
+                const handleToggleUni = (uni) => {
+                    setFilterUnis(prev =>
+                        prev.includes(uni) ? prev.filter(u => u !== uni) : [...prev, uni]
+                    );
+                };
+
                 const handleSelectAllSubjects = () => setFilterSubjects([...uniqueSubjects]);
                 const handleDeselectAllSubjects = () => setFilterSubjects([]);
                 const handleToggleSubject = (sub) => {
@@ -985,7 +852,7 @@
                 };
 
                 const handleClearAllFilters = () => {
-                    setFilterUni('All');
+                    setFilterUnis([]);
                     setFilterSubjects([]);
                     setSearchKeyword('');
                     setShowZeroProb(true);
@@ -996,7 +863,7 @@
                     if (window.confirm("Are you sure you want to clear all data and reset the system?")) {
                         setChoiceList([]);
                         setRank('');
-                        setFilterUni('All');
+                        setFilterUnis([]);
                         setFilterSubjects([]);
                         setSearchKeyword('');
                         setCompareList([]);
@@ -1065,7 +932,7 @@
                     return "⚡ Balanced Architecture: You have a healthy mix of safe and ambitious targets in your pipeline.";
                 }, [choiceList]);
 
-                const hasActiveFilters = filterUni !== 'All' || filterSubjects.length > 0 || searchKeyword.trim() !==
+                const hasActiveFilters = filterUnis.length > 0 || filterSubjects.length > 0 || searchKeyword.trim() !==
                     '' || !showZeroProb;
 
                 if (loading) {
@@ -1096,6 +963,11 @@
                             () => setSearchModalData(null) }
                         data = { searchModalData }
                         /> <
+                        ResearchHubModal isOpen = { !!researchHubData }
+                        onClose = {
+                            () => setResearchHubData(null) }
+                        data = { researchHubData }
+                        /> <
                         TrendModal isOpen = { !!trendModalData }
                         onClose = {
                             () => setTrendModalData(null) }
@@ -1104,8 +976,7 @@
                         NoticeModal isOpen = { isNoticeOpen }
                         onClose = {
                             () => setIsNoticeOpen(false) }
-                        /> <
-                        AIChatWidget / > { /* Compare Bar */ } {
+                        /> { /* Compare Bar */ } {
                             compareList.length > 0 && !showCompareModal && ( <
                                 div className = "fixed top-6 left-1/2 -translate-x-1/2 bg-indigo-600 border border-indigo-400 text-white px-6 py-3 rounded-full shadow-2xl z-40 flex items-center gap-4 animate-slide-up" >
                                 <
@@ -1196,7 +1067,8 @@
                         /h1> <
                         p className = "text-gray-400 text-lg max-w-2xl mx-auto font-light" >
                         Premium Neural - driven probability analytics.Map your optimal academic roadmap instantly. <
-                        span className = "text-teal-400 font-medium" > Now with Multi - Subject Filtering. < /span> <
+                        span className = "text-teal-400 font-medium" > Now with Multi - University & Multi - Subject
+                        Filtering. < /span> <
                         /p> <
                         /div>
 
@@ -1206,9 +1078,9 @@
                         div className = "absolute -top-px left-10 right-10 h-px bg-gradient-to-r from-transparent via-teal-400 to-transparent opacity-50" > < /div>
 
                         <
-                        div className = "grid grid-cols-1 md:grid-cols-4 lg:grid-cols-12 gap-5" >
+                        div className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5" >
                         <
-                        div className = "w-full relative group lg:col-span-3" >
+                        div className = "w-full relative group" >
                         <
                         label className = "text-[11px] text-gray-400 uppercase tracking-widest mb-2 block ml-1 font-semibold" >
                         Current Merit Rank <
@@ -1224,7 +1096,7 @@
                         /div>
 
                         <
-                        div className = "w-full relative group lg:col-span-3" >
+                        div className = "w-full relative group" >
                         <
                         label className = "text-[11px] text-gray-400 uppercase tracking-widest mb-2 block ml-1 font-semibold" >
                         Smart Text Filter <
@@ -1239,506 +1111,587 @@
                         /> <
                         /div>
 
-                        <
-                        div className = "w-full relative group lg:col-span-3" >
+                        { /* Multi-University Selector */ } <
+                        div className = "w-full relative group" ref = { uniDropdownRef } >
                         <
                         label className = "text-[11px] text-gray-400 uppercase tracking-widest mb-2 block ml-1 font-semibold" >
-                        Target Node(Uni) <
+                        Target Nodes(Uni) < span className = "text-teal-400" > Multi < /span> <
                         /label> <
-                        span className = "material-symbols-rounded absolute left-4 top-[36px] text-gray-400 group-focus-within:text-indigo-400 transition-colors pointer-events-none" > domain < /span> <
-                        select className = "w-full bg-[#09090b]/60 border border-white/10 rounded-2xl py-3.5 pl-12 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-400/50 text-base appearance-none cursor-pointer transition-all hover:bg-[#09090b]/80"
-                        value = { filterUni }
-                        onChange = {
-                            (e) => setFilterUni(e.target.value) } > {
-                                uniqueUnis.map(uni => < option key = { uni }
-                                    value = { uni } > { uni } < /option>)
-                            } <
-                            /select> <
-                            span className = "material-symbols-rounded absolute right-4 top-[36px] text-gray-500 pointer-events-none" > expand_more < /span> <
-                            /div>
+                        span className = "material-symbols-rounded absolute left-4 top-[36px] text-gray-400 group-focus-within:text-cyan-400 transition-colors pointer-events-none" > domain < /span> <
+                        button
+                        onClick = {
+                            () => { setShowUniDropdown(!showUniDropdown);
+                                setUniSearch(''); } }
+                        className = "w-full bg-[#09090b]/60 border border-white/10 rounded-2xl py-3.5 pl-12 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 text-base cursor-pointer transition-all hover:bg-[#09090b]/80 text-left flex items-center justify-between min-h-[52px]" >
+                        <
+                        span className = { filterUnis.length > 0 ? 'text-white' : 'text-gray-500' } > {
+                            filterUnis.length === 0 ? 'All Universities' :
+                                filterUnis.length === 1 ? filterUnis[0] :
+                                `${filterUnis.length} universities selected`
+                        } <
+                        /span> {
+                            filterUnis.length > 0 && ( <
+                                span className = "bg-teal-500/20 text-teal-300 text-xs font-bold px-2 py-0.5 rounded-full ml-2" > { filterUnis
+                                    .length } < /span>
+                            )
+                        } <
+                        /button> <
+                        span className = "material-symbols-rounded absolute right-4 top-[36px] text-gray-500 pointer-events-none" > expand_more < /span>
 
-                            { /* Multi-Subject Selector */ } <
-                            div className = "w-full relative group lg:col-span-3" ref = { subjectDropdownRef } >
-                            <
-                            label className = "text-[11px] text-gray-400 uppercase tracking-widest mb-2 block ml-1 font-semibold" >
-                            Target Vectors(Sub) < span className = "text-teal-400" > Multi < /span> <
-                            /label> <
-                            span className = "material-symbols-rounded absolute left-4 top-[36px] text-gray-400 group-focus-within:text-cyan-400 transition-colors pointer-events-none" > memory < /span> <
-                            button
-                            onClick = {
-                                () => { setShowSubjectDropdown(!showSubjectDropdown);
-                                    setSubjectSearch(''); } }
-                            className = "w-full bg-[#09090b]/60 border border-white/10 rounded-2xl py-3.5 pl-12 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 text-base cursor-pointer transition-all hover:bg-[#09090b]/80 text-left flex items-center justify-between min-h-[52px]" >
-                            <
-                            span className = { filterSubjects.length > 0 ? 'text-white' : 'text-gray-500' } > {
-                                filterSubjects.length === 0 ? 'All Subjects' :
-                                    filterSubjects.length === 1 ? filterSubjects[0] :
-                                    `${filterSubjects.length} subjects selected`
-                            } <
-                            /span> {
-                                filterSubjects.length > 0 && ( <
-                                    span className = "bg-teal-500/20 text-teal-300 text-xs font-bold px-2 py-0.5 rounded-full ml-2" > { filterSubjects
-                                        .length } < /span>
-                                )
-                            } <
-                            /button> <
-                            span className = "material-symbols-rounded absolute right-4 top-[36px] text-gray-500 pointer-events-none" > expand_more < /span>
+                        {
+                            showUniDropdown && ( <
+                                div className = "absolute top-full mt-2 left-0 right-0 bg-[#0f172a] border border-white/15 rounded-2xl shadow-2xl z-30 animate-dropdown-in overflow-hidden" >
+                                <
+                                div className = "p-3 border-b border-white/10" >
+                                <
+                                div className = "relative" >
+                                <
+                                span className = "material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-[18px]" > search < /span> <
+                                input type = "text"
+                                placeholder = "Filter universities..."
+                                value = { uniSearch }
+                                onChange = {
+                                    (e) => setUniSearch(e.target.value) }
+                                className = "w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-9 pr-3 text-sm text-white focus:outline-none focus:border-teal-400/50 transition-colors"
+                                onClick = {
+                                    (e) => e.stopPropagation() }
+                                /> <
+                                /div> <
+                                div className = "flex gap-2 mt-2" >
+                                <
+                                button onClick = { handleSelectAllUnis }
+                                className = "text-[10px] text-teal-400 hover:text-teal-300 font-semibold uppercase tracking-wider px-2 py-1 rounded-lg hover:bg-teal-500/10 transition-colors" >
+                                Select All < /button> <
+                                button onClick = { handleDeselectAllUnis }
+                                className = "text-[10px] text-gray-400 hover:text-white font-semibold uppercase tracking-wider px-2 py-1 rounded-lg hover:bg-white/5 transition-colors" >
+                                Deselect All < /button> <
+                                /div> <
+                                /div> <
+                                div className = "multi-select-dropdown p-2" > {
+                                    filteredUniOptions.length === 0 ? ( <
+                                        p className = "text-gray-500 text-sm text-center py-4" > No universities
+                                        match your search. < /p>
+                                    ) : (
+                                        filteredUniOptions.map(uni => ( <
+                                            label key = { uni }
+                                            className = { `flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all hover:bg-white/5 ${
+                                                    filterUnis.includes(uni) ? 'bg-teal-500/10 border border-teal-500/20' : 'border border-transparent'
+                                                }` } >
+                                            <
+                                            input type = "checkbox"
+                                            checked = { filterUnis.includes(uni) }
+                                            onChange = {
+                                                () => handleToggleUni(uni) }
+                                            className = "checkbox-custom"
+                                            /> <
+                                            span className = { `text-sm font-medium ${filterUnis.includes(uni) ? 'text-teal-300' : 'text-gray-300'}` } > { uni } < /span> <
+                                            /label>
+                                        ))
+                                    )
+                                } <
+                                /div> <
+                                /div>
+                            )
+                        } <
+                        /div>
 
-                            {
-                                showSubjectDropdown && ( <
-                                    div className = "absolute top-full mt-2 left-0 right-0 bg-[#0f172a] border border-white/15 rounded-2xl shadow-2xl z-30 animate-dropdown-in overflow-hidden" >
-                                    <
-                                    div className = "p-3 border-b border-white/10" >
-                                    <
-                                    div className = "relative" >
-                                    <
-                                    span className = "material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-[18px]" > search < /span> <
-                                    input type = "text"
-                                    placeholder = "Filter subjects..."
-                                    value = { subjectSearch }
-                                    onChange = {
-                                        (e) => setSubjectSearch(e.target.value) }
-                                    className = "w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-9 pr-3 text-sm text-white focus:outline-none focus:border-teal-400/50 transition-colors"
-                                    onClick = {
-                                        (e) => e.stopPropagation() }
-                                    /> <
-                                    /div> <
-                                    div className = "flex gap-2 mt-2" >
-                                    <
-                                    button onClick = { handleSelectAllSubjects }
-                                    className = "text-[10px] text-teal-400 hover:text-teal-300 font-semibold uppercase tracking-wider px-2 py-1 rounded-lg hover:bg-teal-500/10 transition-colors" >
-                                    Select All < /button> <
-                                    button onClick = { handleDeselectAllSubjects }
-                                    className = "text-[10px] text-gray-400 hover:text-white font-semibold uppercase tracking-wider px-2 py-1 rounded-lg hover:bg-white/5 transition-colors" >
-                                    Deselect All < /button> <
-                                    /div> <
-                                    /div> <
-                                    div className = "multi-select-dropdown p-2" > {
-                                        filteredSubjectOptions.length === 0 ? ( <
-                                            p className = "text-gray-500 text-sm text-center py-4" > No subjects
-                                            match your search. < /p>
-                                        ) : (
-                                            filteredSubjectOptions.map(sub => ( <
-                                                label key = { sub }
-                                                className = { `flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all hover:bg-white/5 ${
-                                                        filterSubjects.includes(sub) ? 'bg-teal-500/10 border border-teal-500/20' : 'border border-transparent'
-                                                    }` } >
-                                                <
-                                                input type = "checkbox"
-                                                checked = { filterSubjects.includes(sub) }
-                                                onChange = {
-                                                    () => handleToggleSubject(sub) }
-                                                className = "checkbox-custom"
-                                                /> <
-                                                span className = { `text-sm font-medium ${filterSubjects.includes(sub) ? 'text-teal-300' : 'text-gray-300'}` } > { sub } < /span> <
-                                                /label>
-                                            ))
-                                        )
-                                    } <
-                                    /div> <
-                                    /div>
-                                )
-                            } <
-                            /div> <
-                            /div>
+                        { /* Multi-Subject Selector */ } <
+                        div className = "w-full relative group" ref = { subjectDropdownRef } >
+                        <
+                        label className = "text-[11px] text-gray-400 uppercase tracking-widest mb-2 block ml-1 font-semibold" >
+                        Target Vectors(Sub) < span className = "text-teal-400" > Multi < /span> <
+                        /label> <
+                        span className = "material-symbols-rounded absolute left-4 top-[36px] text-gray-400 group-focus-within:text-cyan-400 transition-colors pointer-events-none" > memory < /span> <
+                        button
+                        onClick = {
+                            () => { setShowSubjectDropdown(!showSubjectDropdown);
+                                setSubjectSearch(''); } }
+                        className = "w-full bg-[#09090b]/60 border border-white/10 rounded-2xl py-3.5 pl-12 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 text-base cursor-pointer transition-all hover:bg-[#09090b]/80 text-left flex items-center justify-between min-h-[52px]" >
+                        <
+                        span className = { filterSubjects.length > 0 ? 'text-white' : 'text-gray-500' } > {
+                            filterSubjects.length === 0 ? 'All Subjects' :
+                                filterSubjects.length === 1 ? filterSubjects[0] :
+                                `${filterSubjects.length} subjects selected`
+                        } <
+                        /span> {
+                            filterSubjects.length > 0 && ( <
+                                span className = "bg-teal-500/20 text-teal-300 text-xs font-bold px-2 py-0.5 rounded-full ml-2" > { filterSubjects
+                                    .length } < /span>
+                            )
+                        } <
+                        /button> <
+                        span className = "material-symbols-rounded absolute right-4 top-[36px] text-gray-500 pointer-events-none" > expand_more < /span>
 
-                            { /* Quick action row */ } <
-                            div className = "w-full max-w-6xl flex flex-wrap items-center gap-3 mb-0 -mt-2" >
-                            {
-                                hasActiveFilters && ( <
-                                    button onClick = { handleClearAllFilters }
-                                    className = "text-xs text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 border border-white/5" >
-                                    <
-                                    span className = "material-symbols-rounded text-[14px]" > filter_alt_off < /span> Clear
-                                    All Filters <
-                                    /button>
-                                )
-                            } <
-                            button onClick = {
-                                () => setShowZeroProb(!showZeroProb) }
-                            className = { `text-xs px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 border ${
+                        {
+                            showSubjectDropdown && ( <
+                                div className = "absolute top-full mt-2 left-0 right-0 bg-[#0f172a] border border-white/15 rounded-2xl shadow-2xl z-30 animate-dropdown-in overflow-hidden" >
+                                <
+                                div className = "p-3 border-b border-white/10" >
+                                <
+                                div className = "relative" >
+                                <
+                                span className = "material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-[18px]" > search < /span> <
+                                input type = "text"
+                                placeholder = "Filter subjects..."
+                                value = { subjectSearch }
+                                onChange = {
+                                    (e) => setSubjectSearch(e.target.value) }
+                                className = "w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-9 pr-3 text-sm text-white focus:outline-none focus:border-teal-400/50 transition-colors"
+                                onClick = {
+                                    (e) => e.stopPropagation() }
+                                /> <
+                                /div> <
+                                div className = "flex gap-2 mt-2" >
+                                <
+                                button onClick = { handleSelectAllSubjects }
+                                className = "text-[10px] text-teal-400 hover:text-teal-300 font-semibold uppercase tracking-wider px-2 py-1 rounded-lg hover:bg-teal-500/10 transition-colors" >
+                                Select All < /button> <
+                                button onClick = { handleDeselectAllSubjects }
+                                className = "text-[10px] text-gray-400 hover:text-white font-semibold uppercase tracking-wider px-2 py-1 rounded-lg hover:bg-white/5 transition-colors" >
+                                Deselect All < /button> <
+                                /div> <
+                                /div> <
+                                div className = "multi-select-dropdown p-2" > {
+                                    filteredSubjectOptions.length === 0 ? ( <
+                                        p className = "text-gray-500 text-sm text-center py-4" > No subjects
+                                        match your search. < /p>
+                                    ) : (
+                                        filteredSubjectOptions.map(sub => ( <
+                                            label key = { sub }
+                                            className = { `flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all hover:bg-white/5 ${
+                                                    filterSubjects.includes(sub) ? 'bg-teal-500/10 border border-teal-500/20' : 'border border-transparent'
+                                                }` } >
+                                            <
+                                            input type = "checkbox"
+                                            checked = { filterSubjects.includes(sub) }
+                                            onChange = {
+                                                () => handleToggleSubject(sub) }
+                                            className = "checkbox-custom"
+                                            /> <
+                                            span className = { `text-sm font-medium ${filterSubjects.includes(sub) ? 'text-teal-300' : 'text-gray-300'}` } > { sub } < /span> <
+                                            /label>
+                                        ))
+                                    )
+                                } <
+                                /div> <
+                                /div>
+                            )
+                        } <
+                        /div> <
+                        /div>
+
+                        { /* Quick action row */ } <
+                        div className = "w-full max-w-6xl flex flex-wrap items-center gap-3 mb-0 -mt-2" >
+                        {
+                            hasActiveFilters && ( <
+                                button onClick = { handleClearAllFilters }
+                                className = "text-xs text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 border border-white/5" >
+                                <
+                                span className = "material-symbols-rounded text-[14px]" > filter_alt_off < /span> Clear
+                                All Filters <
+                                /button>
+                            )
+                        } <
+                        button onClick = {
+                            () => setShowZeroProb(!showZeroProb) }
+                        className = { `text-xs px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 border ${
                                     showZeroProb 
                                     ? 'bg-teal-500/10 text-teal-400 border-teal-500/30 hover:bg-teal-500/20' 
                                     : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
                                 }` }
-                            title = "Toggle visibility of 0% probability subjects" >
-                            <
-                            span className = "material-symbols-rounded text-[14px]" > { showZeroProb ? 'visibility' :
+                        title = "Toggle visibility of 0% probability subjects" >
+                        <
+                        span className = "material-symbols-rounded text-[14px]" > { showZeroProb ? 'visibility' :
                                 'visibility_off' } < /span> { showZeroProb ? 'Showing 0% Prob' : 'Hiding 0% Prob' } <
-                            /button> <
-                            /div> <
-                            /div>
+                        /button> <
+                        /div> <
+                        /div>
 
-                            { /* Choice List / Target Array */ } {
-                                choiceList.length > 0 && ( <
-                                    div className = "w-full max-w-6xl mb-12 mt-8" >
-                                    <
-                                    div className = "glass-panel rounded-[2rem] p-6 md:p-8 relative overflow-hidden border border-indigo-500/30 shadow-[0_0_50px_-15px_rgba(99,102,241,0.3)]" >
-                                    <
-                                    div className = "absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" > < /div>
+                        { /* Choice List / Target Array */ } {
+                            choiceList.length > 0 && ( <
+                                div className = "w-full max-w-6xl mb-12 mt-8" >
+                                <
+                                div className = "glass-panel rounded-[2rem] p-6 md:p-8 relative overflow-hidden border border-indigo-500/30 shadow-[0_0_50px_-15px_rgba(99,102,241,0.3)]" >
+                                <
+                                div className = "absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" > < /div>
 
-                                    <
-                                    div className = "flex flex-col xl:flex-row items-start xl:items-center justify-between mb-6 gap-4" >
-                                    <
-                                    div >
-                                    <
-                                    h2 className = "text-2xl font-bold flex items-center gap-3 mb-1 text-white" >
-                                    <
-                                    span className = "material-symbols-rounded text-indigo-400 p-2 bg-indigo-400/10 rounded-xl" >
-                                    checklist_rtl < /span> Target Pipeline <
-                                    span className = "text-sm font-normal text-gray-400 ml-2" > ({ choiceList.length }
-                                        nodes) < /span> <
-                                    /h2> <
-                                    p className = "text-sm text-gray-400 ml-[52px]" > Drag and drop nodes to reorder
-                                    your priority allocations. < /p> <
-                                    /div> <
-                                    div className = "flex flex-wrap gap-3" >
-                                    <
-                                    button onClick = { handleExportCSV }
-                                    className = "bg-white/5 hover:bg-white/10 border border-white/10 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 font-medium transition-all text-sm" >
-                                    <
-                                    span className = "material-symbols-rounded text-[20px]" > csv < /span> Data Export <
-                                    /button> <
-                                    button onClick = { handleDownloadPDF }
-                                    className = "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-medium transition-all shadow-[0_0_20px_rgba(99,102,241,0.4)] active:scale-95 text-sm" >
-                                    <
-                                    span className = "material-symbols-rounded text-[20px]" > picture_as_pdf < /span> Generate
-                                    Premium PDF <
-                                    /button> <
-                                    /div> <
-                                    /div>
+                                <
+                                div className = "flex flex-col xl:flex-row items-start xl:items-center justify-between mb-6 gap-4" >
+                                <
+                                div >
+                                <
+                                h2 className = "text-2xl font-bold flex items-center gap-3 mb-1 text-white" >
+                                <
+                                span className = "material-symbols-rounded text-indigo-400 p-2 bg-indigo-400/10 rounded-xl" >
+                                checklist_rtl < /span> Target Pipeline <
+                                span className = "text-sm font-normal text-gray-400 ml-2" > ({ choiceList.length }
+                                    nodes) < /span> <
+                                /h2> <
+                                p className = "text-sm text-gray-400 ml-[52px]" > Drag and drop nodes to reorder
+                                your priority allocations. < /p> <
+                                /div> <
+                                div className = "flex flex-wrap gap-3" >
+                                <
+                                button onClick = { handleExportCSV }
+                                className = "bg-white/5 hover:bg-white/10 border border-white/10 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 font-medium transition-all text-sm" >
+                                <
+                                span className = "material-symbols-rounded text-[20px]" > csv < /span> Data Export <
+                                /button> <
+                                button onClick = { handleDownloadPDF }
+                                className = "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-medium transition-all shadow-[0_0_20px_rgba(99,102,241,0.4)] active:scale-95 text-sm" >
+                                <
+                                span className = "material-symbols-rounded text-[20px]" > picture_as_pdf < /span> Generate
+                                Premium PDF <
+                                /button> <
+                                /div> <
+                                /div>
 
-                                    <
-                                    div className = "mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-500/20 flex items-start gap-3" >
-                                    <
-                                    span className = "material-symbols-rounded text-blue-400 mt-0.5" > smart_toy < /span> <
-                                    div >
-                                    <
-                                    h4 className = "text-sm font-bold text-blue-300 mb-1" > AI Strategy Insight < /h4> <
-                                    p className = "text-sm text-gray-300" > { aiStrategy } < /p> <
-                                    /div> <
-                                    /div>
+                                <
+                                div className = "mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-500/20 flex items-start gap-3" >
+                                <
+                                span className = "material-symbols-rounded text-blue-400 mt-0.5" > smart_toy < /span> <
+                                div >
+                                <
+                                h4 className = "text-sm font-bold text-blue-300 mb-1" > AI Strategy Insight < /h4> <
+                                p className = "text-sm text-gray-300" > { aiStrategy } < /p> <
+                                /div> <
+                                /div>
 
-                                    <
-                                    div className = "flex flex-col gap-3" > {
-                                        choiceList.map((item, index) => ( <
+                                <
+                                div className = "flex flex-col gap-3" > {
+                                    choiceList.map((item, index) => ( <
+                                        div key = { `${item.uni}-${item.dept}` }
+                                        draggable onDragStart = {
+                                            (e) => onDragStart(e, index) }
+                                        onDragEnter = {
+                                            (e) => onDragEnter(e, index) }
+                                        onDragEnd = { onDragEnd }
+                                        onDragOver = { onDragOver }
+                                        onDrop = {
+                                            (e) => onDrop(e, index) }
+                                        className = "pipeline-item flex flex-col sm:flex-row sm:items-center gap-4 bg-[#09090b]/60 border border-white/5 p-4 rounded-2xl hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all group cursor-grab active:cursor-grabbing" >
+                                        <
+                                        div className = "hidden sm:flex items-center text-gray-500 cursor-grab pr-2 border-r border-white/10" >
+                                        <
+                                        span className = "material-symbols-rounded" > drag_indicator < /span> <
+                                        /div> <
+                                        div className = "hidden sm:block text-xl font-black text-indigo-500/30 w-6 text-center" > { index +
+                                            1 } < /div>
+
+                                        <
+                                        div className = "flex-1 flex justify-between items-center w-full" >
+                                        <
+                                        div >
+                                        <
+                                        h3 className = "text-base md:text-lg font-bold text-gray-100 flex items-center gap-2" >
+                                        <
+                                        span className = "sm:hidden text-indigo-400" > { index + 1 }.. < /span>{item.dept} <
+                                        /h3> <
+                                        p className = "text-indigo-300/70 text-xs md:text-sm font-medium" > { item
+                                            .uni } < /p> <
+                                        /div> <
+                                        /div>
+
+                                        <
+                                        div className = "hidden lg:flex items-center gap-4 px-6 border-l border-white/10" >
+                                        <
+                                        div className = "text-center" >
+                                        <
+                                        p className = "text-[10px] text-gray-500 uppercase tracking-wider mb-0.5" >
+                                        Status <
+                                        /p> <
+                                        p className = { `text-xs font-bold ${item.prob >= 70 ? 'text-emerald-400' : item.prob >= 40 ? 'text-yellow-400' : 'text-red-400'}` } > { item
+                                            .status } < /p> <
+                                        /div> <
+                                        div className = "text-center w-16" >
+                                        <
+                                        p className = "text-[10px] text-gray-500 uppercase tracking-wider mb-0.5" >
+                                        Chance <
+                                        /p> <
+                                        div className = "w-full bg-black/40 rounded-full h-1.5 mt-1 relative overflow-hidden" >
+                                        <
+                                        div className = { `absolute top-0 left-0 h-full rounded-full ${item.prob >= 70 ? 'bg-emerald-400' : item.prob >= 40 ? 'bg-yellow-400' : 'bg-red-400'}` }
+                                        style = { { width: `${item.prob}%` } } > < /div> <
+                                        /div> <
+                                        /div> <
+                                        /div>
+
+                                        <
+                                        div className = "flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t border-white/5 sm:border-0 pl-2" >
+                                        <
+                                        button onClick = {
+                                            () => setSearchModalData(item) }
+                                        className = "p-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/30 transition-all border border-blue-500/20"
+                                        title = "Smart Search" > < span className = "material-symbols-rounded text-sm block" >
+                                        travel_explore < /span></button >
+                                        <
+                                        button onClick = {
+                                            () => setResearchHubData(item) }
+                                        className = "p-2 rounded-xl bg-purple-500/10 text-purple-400 hover:bg-purple-500/30 transition-all border border-purple-500/20"
+                                        title = "Research Hub" > < span className = "material-symbols-rounded text-sm block" >
+                                        database < /span></button >
+
+                                        <
+                                        div className = "flex items-center gap-1 sm:hidden" >
+                                        <
+                                        button onClick = {
+                                            () => handleMove(index, -1) }
+                                        disabled = { index === 0 }
+                                        className = "p-1.5 text-gray-500 bg-white/5 rounded-lg disabled:opacity-20" > < span className = "material-symbols-rounded text-sm block" >
+                                        keyboard_arrow_up < /span></button >
+                                        <
+                                        button onClick = {
+                                            () => handleMove(index, 1) }
+                                        disabled = { index === choiceList.length - 1 }
+                                        className = "p-1.5 text-gray-500 bg-white/5 rounded-lg disabled:opacity-20" > < span className = "material-symbols-rounded text-sm block" >
+                                        keyboard_arrow_down < /span></button >
+                                        <
+                                        /div>
+
+                                        <
+                                        button onClick = {
+                                            () => handleRemoveFromList(index) }
+                                        className = "p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all ml-auto sm:ml-0" > < span className = "material-symbols-rounded" >
+                                        close < /span></button >
+                                        <
+                                        /div> <
+                                        /div>
+                                    ))
+                                } <
+                                /div> <
+                                /div> <
+                                /div>
+                            )
+                        }
+
+                        { /* Results Architecture */ } {
+                            rank && results.length > 0 && ( <
+                                div className = "w-full max-w-7xl mt-4" >
+                                <
+                                div className = "flex flex-col lg:flex-row items-start lg:items-center justify-between mb-6 gap-4" >
+                                <
+                                div className = "flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto" >
+                                <
+                                h2 className = "text-2xl font-bold flex items-center gap-3 text-white" >
+                                <
+                                span className = "material-symbols-rounded text-teal-400" > data_exploration < /span> Data
+                                Matrix Output <
+                                span className = "text-sm font-normal text-gray-400 bg-teal-500/10 px-2 py-0.5 rounded-lg" > { results
+                                    .length } results < /span> <
+                                /h2> <
+                                button onClick = { handleAutoPopulate }
+                                className = "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold hover:bg-emerald-500/20 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all whitespace-nowrap" >
+                                <
+                                span className = "material-symbols-rounded text-[18px]" > auto_awesome < /span> Auto-Fill
+                                Safest <
+                                /button> <
+                                button onClick = { handleAddAllVisible }
+                                className = "bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold hover:bg-cyan-500/20 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all whitespace-nowrap"
+                                title = "Add all currently visible results to your pipeline" >
+                                <
+                                span className = "material-symbols-rounded text-[18px]" > add_chart < /span> Add All
+                                Visible <
+                                /button> <
+                                /div>
+
+                                <
+                                div className = "flex flex-wrap items-center gap-3 w-full lg:w-auto" >
+                                <
+                                div className = "flex items-center bg-white/5 rounded-xl p-1.5 border border-white/5 overflow-x-auto w-full sm:w-auto shadow-inner" >
+                                <
+                                button onClick = {
+                                    () => setSortMode('safest') }
+                                className = { `px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${sortMode === 'safest' ? 'bg-teal-500/20 text-teal-300 shadow-md' : 'text-gray-400 hover:text-white'}` } >
+                                Safest Vectors <
+                                /button> <
+                                button onClick = {
+                                    () => setSortMode('cutoff') }
+                                className = { `px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${sortMode === 'cutoff' ? 'bg-indigo-500/20 text-indigo-300 shadow-md' : 'text-gray-400 hover:text-white'}` } >
+                                Top Tier Priority <
+                                /button> <
+                                button onClick = {
+                                    () => setSortMode('ambitious') }
+                                className = { `px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${sortMode === 'ambitious' ? 'bg-orange-500/20 text-orange-300 shadow-md' : 'text-gray-400 hover:text-white'}` } >
+                                Ambitious <
+                                /button> <
+                                /div>
+
+                                <
+                                div className = "hidden md:flex items-center bg-white/5 rounded-xl p-1.5 border border-white/5 shadow-inner" >
+                                <
+                                button onClick = {
+                                    () => setViewMode('grid') }
+                                className = { `p-1.5 rounded-lg transition-all flex ${viewMode === 'grid' ? 'bg-white/10 text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}` } > < span className = "material-symbols-rounded text-[20px]" >
+                                grid_view < /span></button >
+                                <
+                                button onClick = {
+                                    () => setViewMode('list') }
+                                className = { `p-1.5 rounded-lg transition-all flex ${viewMode === 'list' ? 'bg-white/10 text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}` } > < span className = "material-symbols-rounded text-[20px]" >
+                                view_list < /span></button >
+                                <
+                                /div> <
+                                /div> <
+                                /div>
+
+                                <
+                                div className = { viewMode === 'grid' ?
+                                    "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" :
+                                    "flex flex-col gap-4" } > {
+                                    results.map((item) => {
+                                        const inList = choiceList.some(c => c.uni === item.uni && c.dept === item
+                                        .dept);
+                                        const inCompare = compareList.some(c => c.uni === item.uni && c.dept === item
+                                            .dept);
+                                        const varianceText = item.variance >= 0 ? `+${item.variance.toLocaleString()} Safe` :
+                                            `${item.variance.toLocaleString()} Short`;
+                                        const varianceColor = item.variance >= 0 ? 'text-emerald-400' :
+                                        'text-red-400';
+
+                                        return ( <
                                             div key = { `${item.uni}-${item.dept}` }
-                                            draggable onDragStart = {
-                                                (e) => onDragStart(e, index) }
-                                            onDragEnter = {
-                                                (e) => onDragEnter(e, index) }
-                                            onDragEnd = { onDragEnd }
-                                            onDragOver = { onDragOver }
-                                            onDrop = {
-                                                (e) => onDrop(e, index) }
-                                            className = "pipeline-item flex flex-col sm:flex-row sm:items-center gap-4 bg-[#09090b]/60 border border-white/5 p-4 rounded-2xl hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all group cursor-grab active:cursor-grabbing" >
+                                            className = { `glass-card rounded-[1.5rem] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_40px_-10px_rgba(20,184,166,0.2)] relative overflow-hidden group flex flex-col ${viewMode==='list'? 'md:flex-row md:items-center gap-4' : 'h-full'}` } >
                                             <
-                                            div className = "hidden sm:flex items-center text-gray-500 cursor-grab pr-2 border-r border-white/10" >
-                                            <
-                                            span className = "material-symbols-rounded" > drag_indicator < /span> <
-                                            /div> <
-                                            div className = "hidden sm:block text-xl font-black text-indigo-500/30 w-6 text-center" > { index +
-                                                1 } < /div>
+                                            div className = "absolute top-0 left-0 h-1.5 bg-gradient-to-r from-teal-400 to-indigo-500 transition-all duration-1000 ease-out"
+                                            style = { { width: `${item.prob}%` } } > < /div>
 
                                             <
-                                            div className = "flex-1 flex justify-between items-center w-full" >
+                                            div className = "flex justify-between items-start mb-4 mt-2 gap-2 w-full" >
+                                            <
+                                            div className = "pr-2" >
+                                            <
+                                            h3 className = "text-xl font-bold text-white mb-1.5 group-hover:text-cyan-300 transition-colors leading-tight" > { item
+                                                .dept } < /h3> <
+                                            p className = "text-gray-400 text-sm flex items-center gap-1.5 font-medium" >
+                                            <
+                                            span className = "material-symbols-rounded text-[16px]" > assured_workload <
+                                            /span>{item.uni} <
+                                            /p> <
+                                            /div> <
+                                            div className = "flex flex-col items-end gap-2" >
+                                            <
+                                            div className = { `px-3 py-1.5 rounded-xl text-sm font-black border ${item.bg} ${item.color} ${item.border} shadow-sm` } > { item
+                                                .prob } % <
+                                            /div> <
+                                            /div> <
+                                            /div>
+
+                                            <
+                                            div className = { `mt-auto pt-4 border-t border-white/5 grid grid-cols-2 gap-4 mb-5 w-full` } >
                                             <
                                             div >
                                             <
-                                            h3 className = "text-base md:text-lg font-bold text-gray-100 flex items-center gap-2" >
+                                            span className = "text-[10px] text-gray-500 uppercase tracking-widest block mb-1" >
+                                            Status Code <
+                                            /span> <
+                                            span className = { `text-sm font-bold ${item.color}` } > { item.status } < /span> <
+                                            /div> <
+                                            div className = "text-right" >
                                             <
-                                            span className = "sm:hidden text-indigo-400" > { index + 1 }.. < /span>{item.dept} <
-                                            /h3> <
-                                            p className = "text-indigo-300/70 text-xs md:text-sm font-medium" > { item
-                                                .uni } < /p> <
+                                            span className = "text-[10px] text-gray-500 uppercase tracking-widest block mb-1" >
+                                            Cutoff Matrix <
+                                            /span> <
+                                            span className = "text-sm font-black text-gray-200" > #{item.cutoff
+                                                .toLocaleString()} < /span> <
+                                            span className = { `text-[11px] block mt-0.5 font-mono ${varianceColor}` } > { varianceText } <
+                                            /span> <
                                             /div> <
                                             /div>
 
                                             <
-                                            div className = "hidden lg:flex items-center gap-4 px-6 border-l border-white/10" >
-                                            <
-                                            div className = "text-center" >
-                                            <
-                                            p className = "text-[10px] text-gray-500 uppercase tracking-wider mb-0.5" >
-                                            Status <
-                                            /p> <
-                                            p className = { `text-xs font-bold ${item.prob >= 70 ? 'text-emerald-400' : item.prob >= 40 ? 'text-yellow-400' : 'text-red-400'}` } > { item
-                                                .status } < /p> <
-                                            /div> <
-                                            div className = "text-center w-16" >
-                                            <
-                                            p className = "text-[10px] text-gray-500 uppercase tracking-wider mb-0.5" >
-                                            Chance <
-                                            /p> <
-                                            div className = "w-full bg-black/40 rounded-full h-1.5 mt-1 relative overflow-hidden" >
-                                            <
-                                            div className = { `absolute top-0 left-0 h-full rounded-full ${item.prob >= 70 ? 'bg-emerald-400' : item.prob >= 40 ? 'bg-yellow-400' : 'bg-red-400'}` }
-                                            style = { { width: `${item.prob}%` } } > < /div> <
-                                            /div> <
-                                            /div> <
-                                            /div>
-
-                                            <
-                                            div className = "flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t border-white/5 sm:border-0 pl-2" >
+                                            div className = "flex items-center gap-2 w-full mt-auto" >
                                             <
                                             button onClick = {
                                                 () => setSearchModalData(item) }
-                                            className = "p-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/30 transition-all border border-blue-500/20"
-                                            title = "Smart Search" > < span className = "material-symbols-rounded text-sm block" >
-                                            travel_explore < /span></button >
+                                            className = "p-3 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/30 border border-blue-500/20 transition-all"
+                                            title = "Smart Search" >
+                                            <
+                                            span className = "material-symbols-rounded text-[20px] block" > neurology <
+                                            /span> <
+                                            /button> <
+                                            button onClick = {
+                                                () => setTrendModalData(item) }
+                                            className = "p-3 rounded-xl bg-purple-500/10 text-purple-400 hover:bg-purple-500/30 border border-purple-500/20 transition-all"
+                                            title = "Historical Trends" >
+                                            <
+                                            span className = "material-symbols-rounded text-[20px] block" > monitoring <
+                                            /span> <
+                                            /button> <
+                                            button onClick = {
+                                                () => setResearchHubData(item) }
+                                            className = "p-3 rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/20 transition-all"
+                                            title = "Research Hub" >
+                                            <
+                                            span className = "material-symbols-rounded text-[20px] block" > database <
+                                            /span> <
+                                            /button>
 
                                             <
-                                            div className = "flex items-center gap-1 sm:hidden" >
-                                            <
                                             button onClick = {
-                                                () => handleMove(index, -1) }
-                                            disabled = { index === 0 }
-                                            className = "p-1.5 text-gray-500 bg-white/5 rounded-lg disabled:opacity-20" > < span className = "material-symbols-rounded text-sm block" >
-                                            keyboard_arrow_up < /span></button >
+                                                () => toggleCompare(item) }
+                                            className = { `p-3 rounded-xl border transition-all ${inCompare ? 'bg-indigo-500 text-white border-indigo-400' : 'bg-white/5 text-gray-400 hover:bg-white/10 border-white/10'}` } >
                                             <
-                                            button onClick = {
-                                                () => handleMove(index, 1) }
-                                            disabled = { index === choiceList.length - 1 }
-                                            className = "p-1.5 text-gray-500 bg-white/5 rounded-lg disabled:opacity-20" > < span className = "material-symbols-rounded text-sm block" >
-                                            keyboard_arrow_down < /span></button >
-                                            <
-                                            /div>
+                                            span className = "material-symbols-rounded text-[20px] block" > compare_arrows <
+                                            /span> <
+                                            /button>
 
                                             <
                                             button onClick = {
-                                                () => handleRemoveFromList(index) }
-                                            className = "p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all ml-auto sm:ml-0" > < span className = "material-symbols-rounded" >
-                                            close < /span></button >
+                                                () => handleAddToList(item) }
+                                            disabled = { inList }
+                                            className = { `flex-1 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-bold transition-all shadow-sm ${
+                                                    inList ? 'bg-white/5 text-gray-500 cursor-not-allowed border border-transparent' : 'bg-gradient-to-r from-teal-500/20 to-emerald-500/20 text-emerald-300 hover:from-teal-500/30 hover:to-emerald-500/30 border border-emerald-500/30 hover:border-emerald-500/60'
+                                                }` } >
                                             <
+                                            span className = "material-symbols-rounded text-[20px]" > { inList ?
+                                                'check_circle' : 'add_circle' } <
+                                            /span> { inList ? 'Pipeline' : 'Add Node' } <
+                                            /button> <
                                             /div> <
                                             /div>
-                                        ))
-                                    } <
-                                    /div> <
-                                    /div> <
-                                    /div>
-                                )
-                            }
+                                        );
+                                    })
+                                } <
+                                /div> <
+                                /div>
+                            )
+                        }
 
-                            { /* Results Architecture */ } {
-                                rank && results.length > 0 && ( <
-                                    div className = "w-full max-w-7xl mt-4" >
-                                    <
-                                    div className = "flex flex-col lg:flex-row items-start lg:items-center justify-between mb-6 gap-4" >
-                                    <
-                                    div className = "flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto" >
-                                    <
-                                    h2 className = "text-2xl font-bold flex items-center gap-3 text-white" >
-                                    <
-                                    span className = "material-symbols-rounded text-teal-400" > data_exploration < /span> Data
-                                    Matrix Output <
-                                    span className = "text-sm font-normal text-gray-400 bg-teal-500/10 px-2 py-0.5 rounded-lg" > { results
-                                        .length } results < /span> <
-                                    /h2> <
-                                    button onClick = { handleAutoPopulate }
-                                    className = "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold hover:bg-emerald-500/20 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all whitespace-nowrap" >
-                                    <
-                                    span className = "material-symbols-rounded text-[18px]" > auto_awesome < /span> Auto-Fill
-                                    Safest <
-                                    /button> <
-                                    button onClick = { handleAddAllVisible }
-                                    className = "bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold hover:bg-cyan-500/20 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all whitespace-nowrap"
-                                    title = "Add all currently visible results to your pipeline" >
-                                    <
-                                    span className = "material-symbols-rounded text-[18px]" > add_chart < /span> Add All
-                                    Visible <
-                                    /button> <
-                                    /div>
+                        { /* Empty State */ } {
+                            rank && results.length === 0 && ( <
+                                div className = "glass-panel rounded-[2rem] p-12 text-center max-w-md mx-auto mt-10 border border-red-500/20 shadow-[0_0_30px_-10px_rgba(239,68,68,0.2)]" >
+                                <
+                                span className = "material-symbols-rounded text-7xl text-red-400/50 mb-5 block" > blur_off <
+                                /span> <
+                                h3 className = "text-2xl font-bold text-white mb-3" > Zero Vectors Found < /h3> <
+                                p className = "text-gray-400 text-sm leading-relaxed" > Modify search parameters or
+                                shift your current merit position to recalculate the probability matrix. <
+                                br / > < span className = "text-teal-400" > Tip: Enable "Showing 0 % Prob"
+                                    to see all subjects. < /span> <
+                                /p> <
+                                /div>
+                            )
+                        }
 
-                                    <
-                                    div className = "flex flex-wrap items-center gap-3 w-full lg:w-auto" >
-                                    <
-                                    div className = "flex items-center bg-white/5 rounded-xl p-1.5 border border-white/5 overflow-x-auto w-full sm:w-auto shadow-inner" >
-                                    <
-                                    button onClick = {
-                                        () => setSortMode('safest') }
-                                    className = { `px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${sortMode === 'safest' ? 'bg-teal-500/20 text-teal-300 shadow-md' : 'text-gray-400 hover:text-white'}` } >
-                                    Safest Vectors <
-                                    /button> <
-                                    button onClick = {
-                                        () => setSortMode('cutoff') }
-                                    className = { `px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${sortMode === 'cutoff' ? 'bg-indigo-500/20 text-indigo-300 shadow-md' : 'text-gray-400 hover:text-white'}` } >
-                                    Top Tier Priority <
-                                    /button> <
-                                    button onClick = {
-                                        () => setSortMode('ambitious') }
-                                    className = { `px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${sortMode === 'ambitious' ? 'bg-orange-500/20 text-orange-300 shadow-md' : 'text-gray-400 hover:text-white'}` } >
-                                    Ambitious <
-                                    /button> <
-                                    /div>
+                        <
+                        footer className = "mt-32 mb-8 text-center text-gray-500 text-sm w-full max-w-4xl border-t border-white/5 pt-10" >
+                        <
+                        div className = "flex items-center justify-center gap-2 mb-3" >
+                        <
+                        span className = "material-symbols-rounded text-[20px]" > terminal < /span> <
+                        span className = "font-light" > System Architecture by < span className = "text-teal-400 font-bold hover:text-teal-300 cursor-pointer transition-colors" >
+                        Urfa Hasan Fattah < /span></span >
+                        <
+                        /div> <
+                        p className = "text-[11px] uppercase tracking-widest opacity-40 font-medium" > Predictive
+                        Neural Models·Dynamic Matrix Allocation·v3 .1 Premium Build·Multi-University &
+                        Multi-Subject Engine < /p> <
+                        /footer> <
+                        /div>
+                    );
+                };
 
-                                    <
-                                    div className = "hidden md:flex items-center bg-white/5 rounded-xl p-1.5 border border-white/5 shadow-inner" >
-                                    <
-                                    button onClick = {
-                                        () => setViewMode('grid') }
-                                    className = { `p-1.5 rounded-lg transition-all flex ${viewMode === 'grid' ? 'bg-white/10 text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}` } > < span className = "material-symbols-rounded text-[20px]" >
-                                    grid_view < /span></button >
-                                    <
-                                    button onClick = {
-                                        () => setViewMode('list') }
-                                    className = { `p-1.5 rounded-lg transition-all flex ${viewMode === 'list' ? 'bg-white/10 text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}` } > < span className = "material-symbols-rounded text-[20px]" >
-                                    view_list < /span></button >
-                                    <
-                                    /div> <
-                                    /div> <
-                                    /div>
-
-                                    <
-                                    div className = { viewMode === 'grid' ?
-                                        "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" :
-                                        "flex flex-col gap-4" } > {
-                                        results.map((item) => {
-                                            const inList = choiceList.some(c => c.uni === item.uni && c.dept === item
-                                            .dept);
-                                            const inCompare = compareList.some(c => c.uni === item.uni && c.dept === item
-                                                .dept);
-                                            const varianceText = item.variance >= 0 ? `+${item.variance.toLocaleString()} Safe` :
-                                                `${item.variance.toLocaleString()} Short`;
-                                            const varianceColor = item.variance >= 0 ? 'text-emerald-400' :
-                                            'text-red-400';
-
-                                            return ( <
-                                                div key = { `${item.uni}-${item.dept}` }
-                                                className = { `glass-card rounded-[1.5rem] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_40px_-10px_rgba(20,184,166,0.2)] relative overflow-hidden group flex flex-col ${viewMode==='list'? 'md:flex-row md:items-center gap-4' : 'h-full'}` } >
-                                                <
-                                                div className = "absolute top-0 left-0 h-1.5 bg-gradient-to-r from-teal-400 to-indigo-500 transition-all duration-1000 ease-out"
-                                                style = { { width: `${item.prob}%` } } > < /div>
-
-                                                <
-                                                div className = "flex justify-between items-start mb-4 mt-2 gap-2 w-full" >
-                                                <
-                                                div className = "pr-2" >
-                                                <
-                                                h3 className = "text-xl font-bold text-white mb-1.5 group-hover:text-cyan-300 transition-colors leading-tight" > { item
-                                                    .dept } < /h3> <
-                                                p className = "text-gray-400 text-sm flex items-center gap-1.5 font-medium" >
-                                                <
-                                                span className = "material-symbols-rounded text-[16px]" > assured_workload <
-                                                /span>{item.uni} <
-                                                /p> <
-                                                /div> <
-                                                div className = "flex flex-col items-end gap-2" >
-                                                <
-                                                div className = { `px-3 py-1.5 rounded-xl text-sm font-black border ${item.bg} ${item.color} ${item.border} shadow-sm` } > { item
-                                                    .prob } % <
-                                                /div> <
-                                                /div> <
-                                                /div>
-
-                                                <
-                                                div className = { `mt-auto pt-4 border-t border-white/5 grid grid-cols-2 gap-4 mb-5 w-full` } >
-                                                <
-                                                div >
-                                                <
-                                                span className = "text-[10px] text-gray-500 uppercase tracking-widest block mb-1" >
-                                                Status Code <
-                                                /span> <
-                                                span className = { `text-sm font-bold ${item.color}` } > { item.status } < /span> <
-                                                /div> <
-                                                div className = "text-right" >
-                                                <
-                                                span className = "text-[10px] text-gray-500 uppercase tracking-widest block mb-1" >
-                                                Cutoff Matrix <
-                                                /span> <
-                                                span className = "text-sm font-black text-gray-200" > #{item.cutoff
-                                                    .toLocaleString()} < /span> <
-                                                span className = { `text-[11px] block mt-0.5 font-mono ${varianceColor}` } > { varianceText } <
-                                                /span> <
-                                                /div> <
-                                                /div>
-
-                                                <
-                                                div className = "flex items-center gap-2 w-full mt-auto" >
-                                                <
-                                                button onClick = {
-                                                    () => setSearchModalData(item) }
-                                                className = "p-3 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/30 border border-blue-500/20 transition-all"
-                                                title = "Smart Insight" >
-                                                <
-                                                span className = "material-symbols-rounded text-[20px] block" > neurology <
-                                                /span> <
-                                                /button> <
-                                                button onClick = {
-                                                    () => setTrendModalData(item) }
-                                                className = "p-3 rounded-xl bg-purple-500/10 text-purple-400 hover:bg-purple-500/30 border border-purple-500/20 transition-all"
-                                                title = "Historical Trends" >
-                                                <
-                                                span className = "material-symbols-rounded text-[20px] block" > monitoring <
-                                                /span> <
-                                                /button>
-
-                                                <
-                                                button onClick = {
-                                                    () => toggleCompare(item) }
-                                                className = { `p-3 rounded-xl border transition-all ${inCompare ? 'bg-indigo-500 text-white border-indigo-400' : 'bg-white/5 text-gray-400 hover:bg-white/10 border-white/10'}` } >
-                                                <
-                                                span className = "material-symbols-rounded text-[20px] block" > compare_arrows <
-                                                /span> <
-                                                /button>
-
-                                                <
-                                                button onClick = {
-                                                    () => handleAddToList(item) }
-                                                disabled = { inList }
-                                                className = { `flex-1 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-bold transition-all shadow-sm ${
-                                                        inList ? 'bg-white/5 text-gray-500 cursor-not-allowed border border-transparent' : 'bg-gradient-to-r from-teal-500/20 to-emerald-500/20 text-emerald-300 hover:from-teal-500/30 hover:to-emerald-500/30 border border-emerald-500/30 hover:border-emerald-500/60'
-                                                    }` } >
-                                                <
-                                                span className = "material-symbols-rounded text-[20px]" > { inList ?
-                                                    'check_circle' : 'add_circle' } <
-                                                /span> { inList ? 'Pipeline' : 'Add Node' } <
-                                                /button> <
-                                                /div> <
-                                                /div>
-                                            );
-                                        })
-                                    } <
-                                    /div> <
-                                    /div>
-                                )
-                            }
-
-                            { /* Empty State */ } {
-                                rank && results.length === 0 && ( <
-                                    div className = "glass-panel rounded-[2rem] p-12 text-center max-w-md mx-auto mt-10 border border-red-500/20 shadow-[0_0_30px_-10px_rgba(239,68,68,0.2)]" >
-                                    <
-                                    span className = "material-symbols-rounded text-7xl text-red-400/50 mb-5 block" > blur_off <
-                                    /span> <
-                                    h3 className = "text-2xl font-bold text-white mb-3" > Zero Vectors Found < /h3> <
-                                    p className = "text-gray-400 text-sm leading-relaxed" > Modify search parameters or
-                                    shift your current merit position to recalculate the probability matrix. <
-                                    br / > < span className = "text-teal-400" > Tip: Enable "Showing 0 % Prob"
-                                        to see all subjects. < /span> <
-                                    /p> <
-                                    /div>
-                                )
-                            }
-
-                            <
-                            footer className = "mt-32 mb-8 text-center text-gray-500 text-sm w-full max-w-4xl border-t border-white/5 pt-10" >
-                            <
-                            div className = "flex items-center justify-center gap-2 mb-3" >
-                            <
-                            span className = "material-symbols-rounded text-[20px]" > terminal < /span> <
-                            span className = "font-light" > System Architecture by < span className = "text-teal-400 font-bold hover:text-teal-300 cursor-pointer transition-colors" >
-                            Urfa Hasan Fattah < /span></span >
-                            <
-                            /div> <
-                            p className = "text-[11px] uppercase tracking-widest opacity-40 font-medium" > Predictive
-                            Neural Models·Dynamic Matrix Allocation·v3 .1 Premium Build·Multi-Subject Engine < /p> <
-                            /footer> <
-                            /div>
-                        );
-                    };
-
-                    const root = ReactDOM.createRoot(document.getElementById('root'));
-                    root.render( < App / > );
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render( < App / > );
     </script>
 </body>
 </html>
