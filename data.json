@@ -934,5 +934,77 @@
         "dept": "Marketing",
         "cutoff": 4281,
         "unit": "Unit-C"
+    },
+    {
+        "uni": "Pabna University of Science and Technology",
+        "dept": "Computer Science and Engineering",
+        "cutoff": 3060,
+        "unit": "A Unit"
+    },
+    {
+        "uni": "Pabna University of Science and Technology",
+        "dept": "Electrical and Electronic Engineering",
+        "cutoff": 2757,
+        "unit": "A Unit"
+    },
+    {
+        "uni": "Pabna University of Science and Technology",
+        "dept": "Electrical, Electronic and Communication Engineering",
+        "cutoff": 4661,
+        "unit": "A Unit"
+    },
+    {
+        "uni": "Pabna University of Science and Technology",
+        "dept": "Information and Communication Engineering",
+        "cutoff": 4978,
+        "unit": "A Unit"
+    },
+    {
+        "uni": "Pabna University of Science and Technology",
+        "dept": "Civil Engineering",
+        "cutoff": 4596,
+        "unit": "A Unit"
+    },
+    {
+        "uni": "Pabna University of Science and Technology",
+        "dept": "Urban and Regional Planning",
+        "cutoff": 8629,
+        "unit": "A Unit"
+    },
+    {
+        "uni": "Pabna University of Science and Technology",
+        "dept": "Pharmacy",
+        "cutoff": 2598,
+        "unit": "A Unit"
+    },
+    {
+        "uni": "Pabna University of Science and Technology",
+        "dept": "Mathematics",
+        "cutoff": 8330,
+        "unit": "A Unit"
+    },
+    {
+        "uni": "Pabna University of Science and Technology",
+        "dept": "Chemistry",
+        "cutoff": 6304,
+        "unit": "A Unit"
+    },
+    {
+        "uni": "Pabna University of Science and Technology",
+        "dept": "Physics",
+        "cutoff": 8364,
+        "unit": "A Unit"
+    },
+    {
+        "uni": "Pabna University of Science and Technology",
+        "dept": "Statistics",
+        "cutoff": 9000,
+        "unit": "A Unit"
+    },
+    {
+        "uni": "Pabna University of Science and Technology",
+        "dept": "Architecture",
+        "cutoff": 137,
+        "unit": "A Unit"
     }
 ]
